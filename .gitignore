@@ -1,0 +1,11 @@
+# *.cache/
+# *.gen/
+# *.hw/
+# *.ip_user_files/
+# *.runs/
+# *.sim/
+# *.xpr
+
+# Ingore all project files except source file directory
+*/*
+!*/*.srcs
