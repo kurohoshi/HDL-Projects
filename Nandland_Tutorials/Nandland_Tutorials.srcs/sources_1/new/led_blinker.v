@@ -26,7 +26,7 @@ wire d_clk_2;
 wire d_clk_3;
 wire d_clk_4;
 
-reg led_select;
+wire led_select;
 
 // modules for clock dividers
 clk_div #(.div(CLK_1)) div1 (

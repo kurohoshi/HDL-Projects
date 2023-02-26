@@ -48,14 +48,12 @@ module vga_tb;
   
   always #5 r_clk <= !r_clk;
   
-  initial
-    begin
-      r_reset <= 1'b1;
-      #100;
-      r_reset <= 1'b0;
-      #100;
-      
-      w_switch2 <= 1'b1;
-
-    end
+  initial begin
+    r_reset <= 1'b1;
+    #100;
+    r_reset <= 1'b0;
+    #100;
+    
+    w_switch2 <= 1'b1;
+  end
 endmodule
