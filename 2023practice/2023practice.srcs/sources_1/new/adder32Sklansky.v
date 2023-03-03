@@ -40,8 +40,8 @@ module adderSklanskyModuleGray #(
             localparam integer LIMIT = (ii <= WIDTH ? ii : WIDTH);
                     
             adderSklanskyModuleBlack #(.WIDTH(LIMIT-ii/2)) adderSklanskyModuleBlack (
-              .i_busG ({i_busG[LIMIT:ii/2+1], w_ggroup[ii/2-1]}),
-              .i_busP (i_busP[LIMIT:ii/2+1]),
+              .i_busG ({i_busG[LIMIT:ii/2+1], w_ggroup[ii/2]}),
+              .i_busP ({i_busP[LIMIT:ii/2+1], w_pgroup[ii/2]}),
               .o_busG (w_ggroup[LIMIT:ii/2+1]),
               .o_busP (w_pgroup[LIMIT:ii/2+1])
             );
@@ -62,7 +62,7 @@ module adderSklanskyModuleBlack #(
     parameter WIDTH = 1
   )(
     input  [WIDTH:0] i_busG,
-    input  [WIDTH:1] i_busP,
+    input  [WIDTH:0] i_busP,
     output [WIDTH:1] o_busG,
     output [WIDTH:1] o_busP
   );
@@ -78,8 +78,8 @@ module adderSklanskyModuleBlack #(
             localparam integer LIMIT = (ii <= WIDTH ? ii : WIDTH);
                     
             adderSklanskyModuleBlack #(.WIDTH(LIMIT-ii/2)) adderSklanskyModuleBlack (
-              .i_busG ({i_busG[LIMIT:ii/2+1], w_ggroup[ii/2-1]}),
-              .i_busP (i_busP[LIMIT:ii/2+1]),
+              .i_busG ({i_busG[LIMIT:ii/2+1], w_ggroup[ii/2]}),
+              .i_busP ({i_busP[LIMIT:ii/2+1], w_pgroup[ii/2]}),
               .o_busG (w_ggroup[LIMIT:ii/2+1]),
               .o_busP (w_pgroup[LIMIT:ii/2+1])
             );
@@ -90,7 +90,7 @@ module adderSklanskyModuleBlack #(
     for(jj=1; jj<=WIDTH; jj=jj+1) begin: pg_black
         pg_black #(.RADIX(2)) pg_black (
           .i_busG ({w_ggroup[jj], i_busG[0]}),
-          .i_busP (w_pgroup[jj]),
+          .i_busP ({w_pgroup[jj], i_busP[0]}),
           .o_bitG (o_busG[jj]),
           .o_bitP (o_busP[jj])
         );
@@ -109,8 +109,10 @@ module adder32Sklansky2 #(
  
     wire [WIDTH:0] w_generate;
     wire [WIDTH:1] w_propagate;
-    wire [WIDTH:1] w_ggroupOut;
+    wire [WIDTH:0] w_ggroupOut;
     assign w_generate[0] = i_bitCin;
+    assign w_ggroupOut[0] = i_bitCin;
+    
     
     pg_gen #(.WIDTH(WIDTH)) pg_gen (
       .i_busA (i_busA),

@@ -49,6 +49,22 @@ module adder1full(
     assign o_cout = i_bitA & i_bitB | i_bitA & i_bitCin | i_bitB & i_bitCin;
 endmodule
 
+module pg_gen #(
+    parameter WIDTH = 32
+  )(
+    input [WIDTH-1:0] i_busA,
+    input [WIDTH-1:0] i_busB,
+    output [WIDTH-1:0] o_busG,
+    output [WIDTH-1:0] o_busP
+  );
+  
+  genvar ii;
+  for(ii=0; ii<WIDTH; ii=ii+1) begin
+    assign o_busG[ii] = i_busA[ii] & i_busB[ii];
+    assign o_busP[ii] = i_busA[ii] ^ i_busB[ii];
+  end
+endmodule
+
 module pg_black #(
     parameter RADIX = 2
   )(
@@ -71,7 +87,7 @@ module pg_gray #(
     parameter RADIX = 2
   )(
     input [RADIX-1:0] i_busG,
-    input [RADIX-2:0] i_busP,
+    input [RADIX-1:1] i_busP,
     output o_bitG
   );
   

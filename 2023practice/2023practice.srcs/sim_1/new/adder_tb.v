@@ -28,7 +28,7 @@ module adder_tb;
     wire [31:0] w_sum;
     wire w_cout;
 
-    adder32CLA UUT(
+    adder32Sklansky2 #(.WIDTH(32)) DUT(
         .i_busA    (r_INA),
         .i_busB    (r_INB),
         .i_bitCin  (r_cin),
