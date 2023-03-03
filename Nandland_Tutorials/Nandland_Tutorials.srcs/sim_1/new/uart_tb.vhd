@@ -24,7 +24,7 @@ use IEEE.STD_LOGIC_1164.ALL;
 
 -- Uncomment the following library declaration if using
 -- arithmetic functions with Signed or Unsigned values
---use IEEE.NUMERIC_STD.ALL;
+use IEEE.NUMERIC_STD.ALL;
 
 -- Uncomment the following library declaration if instantiating
 -- any Xilinx leaf cells in this code.
@@ -75,7 +75,7 @@ begin
     wait until reset <= '0';
     wait for BAUD_CLK*2ns;
 
-    for i in 0 to ARRAY_SIZE loop
+    for i in 0 to ARRAY_SIZE-1 loop
       serial <= '0';
       wait for BAUD_CLK*2ns;
       
@@ -86,6 +86,8 @@ begin
       
       serial <= '1';
       wait for 10*BAUD_CLK*2ns;
+      
+      report "Input Data=" & to_hstring(data_in(i)) & "   Output Data=" & to_hstring(data);
     end loop;
   end process;
 end test;
