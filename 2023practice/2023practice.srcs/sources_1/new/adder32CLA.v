@@ -15,7 +15,7 @@
 // 
 // Revision:
 // Revision 0.01 - File Created
-// Additional Comments:
+// Additional Comments: TODO - modify to implement n-bit CLA adder
 // 
 //////////////////////////////////////////////////////////////////////////////////
 
@@ -80,6 +80,7 @@ module adder4CLA (
         .o_busSum    (o_busSum)
     );
 endmodule
+
 
 module adder32CLA (
     input  [31:0] i_busA,

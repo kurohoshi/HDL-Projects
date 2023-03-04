@@ -9,7 +9,7 @@
 // Project Name:
 // Target Devices: 
 // Tool Versions: 
-// Description: 32-bit Sklansky Tree Adder
+// Description: n-bit Sklansky Tree Adder
 // 
 // Dependencies: 
 // 

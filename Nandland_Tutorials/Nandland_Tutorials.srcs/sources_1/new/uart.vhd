@@ -68,7 +68,6 @@ begin
       constant MAX_BAUD_CLK : INTEGER := CLK_FREQ/BAUD_RATE;
       variable clk_counter  : INTEGER := 0;
       variable data_counter : INTEGER range 0 to DATA_WIDTH-1 := 0;
-      
     begin
         if(i_reset = '1') then
             -- reset all signals to default values

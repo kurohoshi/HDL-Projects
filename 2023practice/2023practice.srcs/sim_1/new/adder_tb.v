@@ -9,13 +9,13 @@
 // Project Name: 
 // Target Devices: 
 // Tool Versions: 
-// Description: 
+// Description: Testbench for adders
 // 
 // Dependencies: 
 // 
 // Revision:
 // Revision 0.01 - File Created
-// Additional Comments:
+// Additional Comments: TODO - Improve testing methodology
 // 
 //////////////////////////////////////////////////////////////////////////////////
 
