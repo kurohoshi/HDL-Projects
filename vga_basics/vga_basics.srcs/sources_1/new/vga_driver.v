@@ -38,11 +38,11 @@ module vga_driver #(
   output [11:0] o_x, o_y
 );
 
-  parameter H_SYNC_POSITION_START = H_BACK_PORCH + FRAME_WIDTH + H_FRONT_PORCH;
-  parameter H_MAX = FRAME_WIDTH + H_FRONT_PORCH + H_SYNC_PULSE + H_BACK_PORCH;
+  localparam H_SYNC_POSITION_START = H_BACK_PORCH + FRAME_WIDTH + H_FRONT_PORCH;
+  localparam H_MAX = FRAME_WIDTH + H_FRONT_PORCH + H_SYNC_PULSE + H_BACK_PORCH;
   
-  parameter V_SYNC_POSITION_START = V_BACK_PORCH + FRAME_HEIGHT + V_FRONT_PORCH;
-  parameter V_MAX = FRAME_HEIGHT + V_FRONT_PORCH + V_SYNC_PULSE + V_BACK_PORCH;
+  localparam V_SYNC_POSITION_START = V_BACK_PORCH + FRAME_HEIGHT + V_FRONT_PORCH;
+  localparam V_MAX = FRAME_HEIGHT + V_FRONT_PORCH + V_SYNC_PULSE + V_BACK_PORCH;
   
   //////////////////////////////////////////
   // VGA Controller wires
