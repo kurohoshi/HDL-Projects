@@ -15,9 +15,7 @@
 -- Revision:
 -- Revision 0.01 - File Created
 -- Additional Comments:
---    TODO - Find some way to claculate position logic vectors automatically
---    TODO - Separate out sync generation code into a separate block for more readability
---    TODO - Separate h and v counting code into a separate block for more readability
+--
 ----------------------------------------------------------------------------------
 
 ----------------------------------------------------------------------------------
@@ -76,7 +74,7 @@ entity vga_driver is
     o_hsync   : out STD_LOGIC;
     o_vsync   : out STD_LOGIC;
     o_active  : out STD_LOGIC;
-    -- There has to be a more elegant way to dynamically pick the msb of bus
+    -- There has to be a more elegant way to dynamically calculate the msb of bus
     o_xpos    : out STD_LOGIC_VECTOR (calc_bits_width(FRAME_WIDTH + H_FRONT_PORCH + H_SYNC_PULSE + H_BACK_PORCH)-1 downto 0);
     o_ypos    : out STD_LOGIC_VECTOR (calc_bits_width(FRAME_HEIGHT + V_FRONT_PORCH + V_SYNC_PULSE + V_BACK_PORCH)-1 downto 0));
 end vga_driver;
@@ -110,26 +108,32 @@ begin
     end if;
   end process;
   
-  process
+  process(i_reset, i_pxl_clk)
   begin
-    if(h_counter >= H_BACK_PORCH and h_counter < H_BACK_PORCH + FRAME_WIDTH and v_counter >= V_BACK_PORCH and v_counter < V_BACK_PORCH + FRAME_HEIGHT) then
+    if(i_reset = '1') then
+      o_active <= '0';
+    elsif(h_counter >= H_BACK_PORCH and h_counter < H_BACK_PORCH + FRAME_WIDTH and v_counter >= V_BACK_PORCH and v_counter < V_BACK_PORCH + FRAME_HEIGHT) then
       o_active <= '1';
     else
       o_active <= '0';
     end if;
   
-    if(h_counter < H_SYNC_POSITION_START) then
+    if(i_reset = '1') then
+      o_hsync <= '1';
+    elsif(h_counter < H_SYNC_POSITION_START) then
       o_hsync <= '1';
     else
       o_hsync <= '0';
     end if;
     
-    if(v_counter < V_SYNC_POSITION_START) then
+    if(i_reset = '1') then
+      o_vsync <= '1';
+    elsif(v_counter < V_SYNC_POSITION_START) then
       o_vsync <= '1';
     else
       o_vsync <= '0';
     end if;
-    
+
     o_xpos <= STD_LOGIC_VECTOR(h_counter);
     o_ypos <= STD_LOGIC_VECTOR(v_counter);
   end process;

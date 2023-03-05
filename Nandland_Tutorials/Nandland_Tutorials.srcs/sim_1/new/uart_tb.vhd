@@ -72,7 +72,7 @@ begin
   
   process
   begin
-    wait until reset <= '0';
+    wait until reset = '0';
     wait for BAUD_CLK*2ns;
 
     for i in 0 to ARRAY_SIZE-1 loop
@@ -91,5 +91,3 @@ begin
     end loop;
   end process;
 end test;
-
-

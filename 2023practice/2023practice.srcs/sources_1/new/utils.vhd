@@ -4,11 +4,11 @@
 -- 
 -- Create Date: 03/04/2023 01:32:37 AM
 -- Design Name: 
--- Module Name:  - 
+-- Module Name:  utils
 -- Project Name: 
 -- Target Devices: 
 -- Tool Versions: 
--- Description: 
+-- Description: Package of utility stuff
 -- 
 -- Dependencies: 
 -- 
