@@ -15,7 +15,7 @@
 -- Revision:
 -- Revision 0.01 - File Created
 -- Additional Comments:
--- 
+--    NOTE: Simulation only, dual edge detection not synthesizable
 ----------------------------------------------------------------------------------
 
 
@@ -52,7 +52,7 @@ begin
     if(i_reset = '1') then
       counter := 0;
       div_clk <= '0';
-    elsif(i_clk'EVENT) then
+    elsif(i_clk'event) then
       if(counter < DIV-1) then
         counter := counter + 1;
       else

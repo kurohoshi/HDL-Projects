@@ -15,7 +15,8 @@
 -- Revision:
 -- Revision 0.01 - File Created
 -- Additional Comments:
---
+--    - https://projectf.io/posts/fpga-graphics/
+--    - https://nandland.com/project-9-vga-introduction-driving-test-patterns-to-vga-monitor/
 ----------------------------------------------------------------------------------
 
 ----------------------------------------------------------------------------------
