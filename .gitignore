@@ -5,6 +5,7 @@
 # *.runs/
 # *.sim/
 # *.xpr
+*.xci
 
 # Ingore all project files except source file directory
 */*
