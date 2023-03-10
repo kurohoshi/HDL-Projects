@@ -47,8 +47,8 @@ architecture test of vga_driver_tb is
   constant V_FRONT_PORCH : INTEGER := 11;
   constant V_SYNC_PULSE  : INTEGER := 2;
   
-  constant H_BIT_WIDTH : INTEGER := calc_bits_width(FRAME_WIDTH + H_FRONT_PORCH + H_SYNC_PULSE + H_BACK_PORCH);
-  constant V_BIT_WIDTH : INTEGER := calc_bits_width(FRAME_HEIGHT + V_FRONT_PORCH + V_SYNC_PULSE + V_BACK_PORCH);
+  constant H_BIT_WIDTH : INTEGER := calc_bits_width(FRAME_WIDTH);
+  constant V_BIT_WIDTH : INTEGER := calc_bits_width(FRAME_HEIGHT);
                
   signal clk     : STD_LOGIC := '1';
   signal reset   : STD_LOGIC := '1';

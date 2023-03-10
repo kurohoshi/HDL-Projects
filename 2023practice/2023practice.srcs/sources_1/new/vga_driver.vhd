@@ -76,19 +76,23 @@ entity vga_driver is
     o_vsync   : out STD_LOGIC;
     o_active  : out STD_LOGIC;
     -- There has to be a more elegant way to dynamically calculate the msb of bus
-    o_xpos    : out STD_LOGIC_VECTOR (calc_bits_width(FRAME_WIDTH + H_FRONT_PORCH + H_SYNC_PULSE + H_BACK_PORCH)-1 downto 0);
-    o_ypos    : out STD_LOGIC_VECTOR (calc_bits_width(FRAME_HEIGHT + V_FRONT_PORCH + V_SYNC_PULSE + V_BACK_PORCH)-1 downto 0));
+    o_xpos    : out STD_LOGIC_VECTOR (calc_bits_width(FRAME_WIDTH)-1 downto 0);
+    o_ypos    : out STD_LOGIC_VECTOR (calc_bits_width(FRAME_HEIGHT)-1 downto 0));
 end vga_driver;
 
 architecture Behavioral of vga_driver is
-  constant H_SYNC_POSITION_START : INTEGER := H_BACK_PORCH + FRAME_WIDTH + H_FRONT_PORCH;
-  constant H_MAX : INTEGER := FRAME_WIDTH + H_FRONT_PORCH + H_SYNC_PULSE + H_BACK_PORCH;
+  constant H_SYNC_START : INTEGER := FRAME_WIDTH + H_FRONT_PORCH;
+  constant H_SYNC_END   : INTEGER := FRAME_WIDTH + H_FRONT_PORCH + H_SYNC_PULSE;
+  constant H_MAX        : INTEGER := FRAME_WIDTH + H_FRONT_PORCH + H_SYNC_PULSE + H_BACK_PORCH;
   
-  constant V_SYNC_POSITION_START  : INTEGER := V_BACK_PORCH + FRAME_HEIGHT + V_FRONT_PORCH;
-  constant V_MAX  : INTEGER := FRAME_HEIGHT + V_FRONT_PORCH + V_SYNC_PULSE + V_BACK_PORCH;
+  constant V_SYNC_START : INTEGER := FRAME_HEIGHT + V_FRONT_PORCH;
+  constant V_SYNC_END   : INTEGER := FRAME_HEIGHT + V_FRONT_PORCH + V_SYNC_PULSE;
+  constant V_MAX        : INTEGER := FRAME_HEIGHT + V_FRONT_PORCH + V_SYNC_PULSE + V_BACK_PORCH;
   
   signal h_counter : UNSIGNED(calc_bits_width(H_MAX)-1 downto 0);
+  alias  h_xpos : UNSIGNED(calc_bits_width(FRAME_WIDTH)-1 downto 0) is h_counter(calc_bits_width(FRAME_WIDTH)-1 downto 0);
   signal v_counter : UNSIGNED(calc_bits_width(V_MAX)-1 downto 0);
+  alias  v_ypos : UNSIGNED(calc_bits_width(FRAME_HEIGHT)-1 downto 0) is v_counter(calc_bits_width(FRAME_HEIGHT)-1 downto 0);
 begin
   process(i_reset, i_pxl_clk)
   begin
@@ -109,11 +113,11 @@ begin
     end if;
   end process;
   
-  process(i_reset, i_pxl_clk)
+  process(i_reset, h_counter, v_counter)
   begin
     if(i_reset = '1') then
       o_active <= '0';
-    elsif(h_counter >= H_BACK_PORCH and h_counter < H_BACK_PORCH + FRAME_WIDTH and v_counter >= V_BACK_PORCH and v_counter < V_BACK_PORCH + FRAME_HEIGHT) then
+    elsif(h_counter < FRAME_WIDTH and v_counter < FRAME_HEIGHT) then
       o_active <= '1';
     else
       o_active <= '0';
@@ -121,23 +125,21 @@ begin
   
     if(i_reset = '1') then
       o_hsync <= '1';
-    elsif(h_counter < H_SYNC_POSITION_START) then
-      o_hsync <= '1';
-    else
+    elsif(h_counter >= H_SYNC_START and h_counter < H_SYNC_END) then
       o_hsync <= '0';
+    else
+      o_hsync <= '1';
     end if;
     
     if(i_reset = '1') then
       o_vsync <= '1';
-    elsif(v_counter < V_SYNC_POSITION_START) then
-      o_vsync <= '1';
-    else
+    elsif(v_counter >= V_SYNC_START and v_counter < V_SYNC_END) then
       o_vsync <= '0';
+    else
+      o_vsync <= '1';
     end if;
-
-    o_xpos <= STD_LOGIC_VECTOR(h_counter);
-    o_ypos <= STD_LOGIC_VECTOR(v_counter);
+    
+    o_xpos <= STD_LOGIC_VECTOR(h_xpos);
+    o_ypos <= STD_LOGIC_VECTOR(v_ypos);
   end process;
-  
-  
 end Behavioral;
