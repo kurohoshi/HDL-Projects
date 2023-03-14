@@ -8,7 +8,7 @@
 -- Project Name: 
 -- Target Devices: 
 -- Tool Versions: 
--- Description: 
+-- Description: Simple VGA display using ROM data output
 -- 
 -- Dependencies: 
 -- 
