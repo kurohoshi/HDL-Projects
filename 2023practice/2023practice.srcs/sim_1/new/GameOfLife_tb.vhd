@@ -35,8 +35,9 @@ entity GameOfLife_tb is
 end GameOfLife_tb;
 
 architecture test of GameOfLife_tb is
-  signal clk     : STD_LOGIC := '1';
-  signal reset   : STD_LOGIC := '1';
+  signal clk   : STD_LOGIC := '1';
+  signal reset : STD_LOGIC := '1';
+  signal init  : STD_LOGIC := '0';
   
   signal hsync : STD_LOGIC;
   signal vsync : STD_LOGIC;
@@ -46,10 +47,11 @@ architecture test of GameOfLife_tb is
 begin
   clk <= not clk after 1ns;
 
-  dut: entity work.VGA_Project(White)
+  dut: entity work.VGA_Project
     port map(
       i_clk   => clk,
       i_reset => reset,
+      i_init  => init,
       o_hsync => hsync,
       o_vsync => vsync,
       o_red   => red,
@@ -60,6 +62,7 @@ begin
   process
   begin
     reset <= '0' after 10ns;
-    wait for 1ms;
+    wait for 2ms;
+    init <= '1';
   end process;
 end test;
