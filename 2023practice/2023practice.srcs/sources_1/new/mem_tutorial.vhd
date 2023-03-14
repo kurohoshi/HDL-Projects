@@ -41,7 +41,8 @@ entity mem_tutorial is
 end mem_tutorial;
 
 architecture Behavioral of mem_tutorial is
-
+  type buffer_array is array(NATURAL range <>) of STD_LOGIC_VECTOR(3 downto 0);
+  signal rom_buf : buffer_array(1 downto 0);
 begin
   rom_init: entity work.small_rom
     port map(
@@ -50,4 +51,12 @@ begin
       douta => o_dout,
       ena   => i_en
     );
+    
+  process(i_clk)
+  begin
+    if(rising_edge(i_clk)) then
+      rom_buf(1) <= i_addr;
+      rom_buf(0) <= rom_buf(1);
+    end if;
+  end process;
 end Behavioral;
