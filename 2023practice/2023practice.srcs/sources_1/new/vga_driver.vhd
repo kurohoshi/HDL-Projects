@@ -93,6 +93,8 @@ architecture Behavioral of vga_driver is
   alias  h_xpos : UNSIGNED(calc_bits_width(FRAME_WIDTH)-1 downto 0) is h_counter(calc_bits_width(FRAME_WIDTH)-1 downto 0);
   signal v_counter : UNSIGNED(calc_bits_width(V_MAX)-1 downto 0);
   alias  v_ypos : UNSIGNED(calc_bits_width(FRAME_HEIGHT)-1 downto 0) is v_counter(calc_bits_width(FRAME_HEIGHT)-1 downto 0);
+  
+  signal active : STD_LOGIC;
 begin
   process(i_reset, i_pxl_clk)
   begin
@@ -113,14 +115,14 @@ begin
     end if;
   end process;
   
-  process(i_reset, h_counter, v_counter)
+  process(i_reset, h_counter, v_counter, active)
   begin
     if(i_reset = '1') then
-      o_active <= '0';
+      active <= '0';
     elsif(h_counter < FRAME_WIDTH and v_counter < FRAME_HEIGHT) then
-      o_active <= '1';
+      active <= '1';
     else
-      o_active <= '0';
+      active <= '0';
     end if;
   
     if(i_reset = '1') then
@@ -139,7 +141,14 @@ begin
       o_vsync <= '1';
     end if;
     
-    o_xpos <= STD_LOGIC_VECTOR(h_xpos);
-    o_ypos <= STD_LOGIC_VECTOR(v_ypos);
+    if(active = '1') then
+      o_xpos <= STD_LOGIC_VECTOR(h_xpos);
+      o_ypos <= STD_LOGIC_VECTOR(v_ypos);
+    else
+      o_xpos <= (others => '0');
+      o_ypos <= (others => '0');
+    end if;
   end process;
+  
+  o_active <= active;
 end Behavioral;
