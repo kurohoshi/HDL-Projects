@@ -38,6 +38,8 @@ architecture test of mem_tutorial_tb is
   signal clk  : STD_LOGIC := '1';
   signal addr : STD_LOGIC_VECTOR(3 downto 0);
   signal en   : STD_LOGIC;
+  signal we   : STD_LOGIC;
+  signal din  : STD_LOGIC_VECTOR(7 downto 0);
   signal dout : STD_LOGIC_VECTOR(7 downto 0);
 begin
   clk <= not clk after 1ns;
@@ -46,23 +48,32 @@ begin
     port map(
       i_clk  => clk,
       i_addr => addr,
+      i_din  => din,
       i_en   => en,
+      i_we   => we,
       o_dout => dout
     );
     
   process
   begin
     en <= '1' after 10ns;
+    din <= "11111111";
     addr <= "0000";
-    wait for 4ns;
+    wait for 2ns;
     addr <= "0001";
-    wait for 4ns;
+    wait for 2ns;
+    we <= '1';
+    wait for 2ns;
+    we <= '0';
     addr <= "0010";
-    wait for 4ns;
+    wait for 2ns;
     addr <= "0011";
     wait for 4ns;
     addr <= "0100";
     wait for 4ns;
+    we <= '1';
+    wait for 2ns;
+    we <= '0';
     addr <= "0101";
     wait for 4ns;
     en <= '0';

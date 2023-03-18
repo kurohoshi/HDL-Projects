@@ -35,7 +35,9 @@ entity mem_tutorial is
   Port(
     i_clk  : in STD_LOGIC;
     i_addr : in STD_LOGIC_VECTOR (3 downto 0);
+    i_din  : in STD_LOGIC_VECTOR (7 downto 0);
     i_en   : in STD_LOGIC;
+    i_we   : in STD_LOGIC;
     o_dout : out STD_LOGIC_VECTOR (7 downto 0)
   );
 end mem_tutorial;
@@ -46,10 +48,12 @@ architecture Behavioral of mem_tutorial is
 begin
   rom_init: entity work.small_rom
     port map(
-      addra => i_addr,
-      clka  => i_clk,
-      douta => o_dout,
-      ena   => i_en
+      addra  => i_addr,
+      clka   => i_clk,
+      dina   => i_din,
+      douta  => o_dout,
+      ena    => i_en,
+      wea(0) => i_we
     );
     
   process(i_clk)
