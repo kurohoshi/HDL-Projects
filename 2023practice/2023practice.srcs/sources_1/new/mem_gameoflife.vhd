@@ -15,7 +15,12 @@
 -- Revision:
 -- Revision 0.01 - File Created
 -- Additional Comments:
--- 
+--     -- https://github.com/hrvach/Life_MiSTer
+--     --   A suitable implementation with a few flaws, the last column is incorrectly computed with an offsetted 3rd column of the neighbors down/up one row.
+--     --   This can be corrected with a 0 buffer at the end of each row for no horzontal wraparound, or
+--     --   a state machine to insert the correct cell at the end and beginning of each row (uses only 1 register, updated per row) for wraparound
+--     --   
+--     --   Similarly, vertical wraparound can be achieved by taking some cycles to load the last row into buffer first and load first row a 2nd time
 ----------------------------------------------------------------------------------
 
 
@@ -40,7 +45,7 @@ entity mem_gameoflife is
     FRAME_HEIGHT  : INTEGER := 480
   );
   Port(
---    i_addra  : in  STD_LOGIC_VECTOR (12 downto 0);
+    i_addra  : in  STD_LOGIC_VECTOR (12 downto 0);
     i_clka   : in  STD_LOGIC;
 --    i_dina   : in  STD_LOGIC;
 --    o_douta  : out STD_LOGIC;
@@ -51,11 +56,19 @@ entity mem_gameoflife is
     o_doutb  : out STD_LOGIC;
     i_enb    : in  STD_LOGIC;
     i_mode   : in  STD_LOGIC_VECTOR (1 downto 0);
-    i_init  : in  STD_LOGIC
+    i_set    : in  STD_LOGIC
   );
 end mem_gameoflife;
 
 architecture Behavioral of mem_gameoflife is
+  constant GOL_WIDTH  : INTEGER := FRAME_WIDTH/8;
+  constant GOL_HEIGHT : INTEGER := FRAME_HEIGHT/8;
+
+  signal gol_x : UNSIGNED(calc_bits_width(GOL_WIDTH)-1 downto 0);
+  signal gol_y : UNSIGNED(calc_bits_width(GOL_HEIGHT)-1 downto 0);
+  signal ren : STD_LOGIC;
+  signal wen : STD_LOGIC;
+
   signal rom_addr   : STD_LOGIC_VECTOR(12 downto 0); -- addr width dependent on number of total cells
   signal rom_dout   : STD_LOGIC_VECTOR(0 downto 0);
   signal rom_en     : STD_LOGIC;
@@ -79,32 +92,80 @@ begin
       ena   => rom_en
     );
     
-  process(i_clka, i_init)
-    constant ROM_MAX : UNSIGNED(rom_addr'range) := to_unsigned((FRAME_WIDTH * FRAME_HEIGHT)/(8*8), rom_addr'length);
+  process(i_clka, i_set)
+    constant ROM_MAX : UNSIGNED(rom_addr'range) := to_unsigned((GOL_WIDTH * GOL_HEIGHT), rom_addr'length);
     
-    type t_init_state IS(idle, active, done);
-    variable s_init : t_init_state := idle;
+    type t_init_state IS(idle, rom_active, user_active, gol_init, gol_load, gol_save, done);
+    variable s_gol : t_init_state := idle;
     
     variable rom_addr_counter : UNSIGNED(rom_addr'range);
   begin
     if(rising_edge(i_clka)) then
-      if(s_init = idle) then
-        if(i_init = '1') then
-          rom_en <= '1';
-          s_init := active;
+      if(s_gol = idle) then
+        if(i_mode(0) = '0' and i_set = '1') then -- game of life mode
+          ren <= '1';
+          wen <= '0';
+          s_gol := gol_load;
+        elsif(i_mode = "01" and i_set = '1' ) then -- user mode
+          ren <= '1';
+          wen <= '1';
+          s_gol := user_active;
+        elsif(i_mode = "11" and i_set = '1') then -- rom mode
+          ren <= '1';
+          wen <= '1';
+          s_gol := rom_active;
         end if;
         rom_addr_counter := (others => '0');
-      elsif(s_init = active) then
+      elsif(s_gol = gol_load) then
+        if(gol_x > 2 and gol_y > 0) then -- "greater than" takes care of cell offset, x delay of 2 from mem read
+          wen <= '1';
+          s_gol := gol_save;
+        else
+          if(gol_x <= GOL_WIDTH) then
+            gol_x <= gol_x + 1;
+          else
+            gol_x <= (others => '0');
+            if(gol_y <= GOL_HEIGHT) then
+              gol_y <= gol_y + 1;
+            else
+              gol_y <= (others => '0');
+            end if;
+          end if;
+        end if;
+      elsif(s_gol = gol_save) then
+        if(gol_x <= GOL_WIDTH) then
+          gol_x <= gol_x + 1;
+          wen <= '0';
+          s_gol := gol_load;
+        else
+          gol_x <= (others => '0');
+          if(gol_y <= GOL_HEIGHT) then
+            gol_y <= gol_y + 1;
+            wen <= '0';
+            s_gol := gol_load;
+          else
+            gol_y <= (others => '0');
+            ren <= '0';
+            wen <= '0';
+            s_gol := done;
+          end if;
+        end if;
+      elsif(s_gol = user_active) then -- essentially a pulse sig to write into mem
+        ren <= '0';
+        wen <= '0';
+        s_gol := done;
+      elsif(s_gol = rom_active) then -- iterate thru entire rom and load into mem
         if(rom_addr_counter < ROM_MAX) then
           rom_addr <= STD_LOGIC_VECTOR(rom_addr_counter);
           rom_addr_counter := rom_addr_counter + "1";
         else
-          rom_en <= '0';
-          s_init := done;
+          ren <= '0';
+          wen <= '0';
+          s_gol := done;
         end if;
-      elsif(s_init = done) then
-        if(i_init = '0') then
-          s_init := idle;
+      elsif(s_gol = done) then
+        if(i_set = '0') then
+          s_gol := idle;
         end if;
       end if;
     end if;
