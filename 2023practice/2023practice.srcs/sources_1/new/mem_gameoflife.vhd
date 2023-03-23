@@ -79,19 +79,13 @@ architecture Behavioral of mem_gameoflife is
   signal delayed_rom_en   : STD_LOGIC;
   signal delayed_rom_addr : STD_LOGIC_VECTOR(12 downto 0);
   
+  signal user_din : STD_LOGIC;
+  signal delayed_user_wen : STD_LOGIC;
+  
   signal pattern_douta : STD_LOGIC_VECTOR(0 downto 0);
   signal pattern_addrb : STD_LOGIC_VECTOR(12 downto 0); -- addr width dependent on number of total cells
   signal pattern_doutb : STD_LOGIC_VECTOR(0 downto 0);
 begin
-  -- ROM storing initial pattern
-  rom_init: entity work.start_pattern
-    port map(
-      addra => rom_addr,
-      clka  => i_clka,
-      douta => rom_dout,
-      ena   => rom_en
-    );
-    
   process(i_clka, i_set)
     constant ROM_MAX : UNSIGNED(rom_addr'range) := to_unsigned((GOL_WIDTH * GOL_HEIGHT), rom_addr'length);
     
@@ -170,6 +164,17 @@ begin
       end if;
     end if;
   end process;
+
+  ---------
+  -- ROM --
+  ---------
+  rom_init: entity work.start_pattern
+    port map(
+      addra => rom_addr,
+      clka  => i_clka,
+      douta => rom_dout,
+      ena   => rom_en
+    );
     
   rom_addr_delay: entity work.shift_reg_array(Behavioral)
     generic map(
@@ -192,7 +197,26 @@ begin
       i_din(0)  => rom_en,
       o_dout(0) => delayed_rom_en
     );
+  
+  ----------------
+  -- User Input --
+  ----------------
+  user_wen_delay: entity work.shift_reg_array(Behavioral)
+    generic map(
+      WIDTH  => 1,
+      LENGTH => 2
+    )
+    port map(
+      i_clk     => i_clka,
+      i_din(0)  => wen,
+      o_dout(0) => delayed_user_wen
+    );
+  
+  user_din <= not douta;
     
+  --------------------------
+  -- Game of Life Memory ---
+  --------------------------
   pattern: entity work.pattern_blk
     port map(
       addra    => delayed_rom_addr,
