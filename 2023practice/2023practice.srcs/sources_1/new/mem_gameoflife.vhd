@@ -42,49 +42,43 @@ use work.utils.all;
 entity mem_gameoflife is
   Generic(
     FRAME_WIDTH   : INTEGER := 640;
-    FRAME_HEIGHT  : INTEGER := 480
+    FRAME_HEIGHT  : INTEGER := 480;
+    ADDR_WIDTH    : INTEGER := 13
   );
   Port(
-    i_addra  : in  STD_LOGIC_VECTOR (12 downto 0);
-    i_clka   : in  STD_LOGIC;
---    i_dina   : in  STD_LOGIC;
---    o_douta  : out STD_LOGIC;
---    i_ena    : in  STD_LOGIC;
---    i_wea    : in  STD_LOGIC;
-    i_addrb  : in  STD_LOGIC_VECTOR (12 downto 0);
-    i_clkb   : in  STD_LOGIC;
-    o_doutb  : out STD_LOGIC;
-    i_enb    : in  STD_LOGIC;
-    i_mode   : in  STD_LOGIC_VECTOR (1 downto 0);
-    i_set    : in  STD_LOGIC
+    i_addra : in  STD_LOGIC_VECTOR (ADDR_WIDTH-1 downto 0);
+    i_clka  : in  STD_LOGIC;
+    i_addrb : in  STD_LOGIC_VECTOR (ADDR_WIDTH-1 downto 0);
+    i_clkb  : in  STD_LOGIC;
+    o_doutb : out STD_LOGIC;
+    i_enb   : in  STD_LOGIC;
+    i_mode  : in  STD_LOGIC_VECTOR (1 downto 0);
+    i_set   : in  STD_LOGIC
   );
 end mem_gameoflife;
 
 architecture Behavioral of mem_gameoflife is
-  constant GOL_WIDTH  : INTEGER := FRAME_WIDTH/8;
-  constant GOL_HEIGHT : INTEGER := FRAME_HEIGHT/8;
+  constant GOL_WIDTH      : INTEGER := FRAME_WIDTH/8;
+  constant GOL_ADDR_WIDTH : INTEGER := calc_bits_width(GOL_WIDTH * GOL_HEIGHT);
 
   signal gol_x : UNSIGNED(calc_bits_width(GOL_WIDTH)-1 downto 0);
   signal gol_y : UNSIGNED(calc_bits_width(GOL_HEIGHT)-1 downto 0);
-  signal ren : STD_LOGIC;
-  signal wen : STD_LOGIC;
+  signal ren   : STD_LOGIC;
+  signal wen   : STD_LOGIC;
 
-  signal rom_addr   : STD_LOGIC_VECTOR(12 downto 0); -- addr width dependent on number of total cells
-  signal rom_dout   : STD_LOGIC_VECTOR(0 downto 0);
-  signal rom_en     : STD_LOGIC;
-  signal r_addr     : STD_LOGIC_VECTOR(12 downto 0);
-  signal r_data     : STD_LOGIC_VECTOR(0 downto 0);
-  signal r_en       : STD_LOGIC;
+  signal rom_addr : STD_LOGIC_VECTOR(GOL_ADDR_WIDTH-1 downto 0);
+  signal rom_dout : STD_LOGIC;
+  signal rom_en   : STD_LOGIC;
   
   signal delayed_rom_en   : STD_LOGIC;
-  signal delayed_rom_addr : STD_LOGIC_VECTOR(12 downto 0);
+  signal delayed_rom_addr : STD_LOGIC_VECTOR(GOL_ADDR_WIDTH-1 downto 0);
   
-  signal user_din : STD_LOGIC;
+  signal user_din         : STD_LOGIC;
   signal delayed_user_wen : STD_LOGIC;
   
-  signal pattern_douta : STD_LOGIC_VECTOR(0 downto 0);
-  signal pattern_addrb : STD_LOGIC_VECTOR(12 downto 0); -- addr width dependent on number of total cells
-  signal pattern_doutb : STD_LOGIC_VECTOR(0 downto 0);
+  signal pattern_addra : STD_LOGIC_VECTOR(GOL_ADDR_WIDTH-1 downto 0);
+  signal pattern_dina  : STD_LOGIC;
+  signal pattern_douta : STD_LOGIC;
 begin
   process(i_clka, i_set)
     constant ROM_MAX : UNSIGNED(rom_addr'range) := to_unsigned((GOL_WIDTH * GOL_HEIGHT), rom_addr'length);
@@ -170,10 +164,10 @@ begin
   ---------
   rom_init: entity work.start_pattern
     port map(
-      addra => rom_addr,
-      clka  => i_clka,
-      douta => rom_dout,
-      ena   => rom_en
+      addra    => rom_addr,
+      clka     => i_clka,
+      douta(0) => rom_dout,
+      ena      => rom_en
     );
     
   rom_addr_delay: entity work.shift_reg_array(Behavioral)
@@ -212,17 +206,17 @@ begin
       o_dout(0) => delayed_user_wen
     );
   
-  user_din <= not douta;
+  user_din <= not pattern_douta;
     
   --------------------------
   -- Game of Life Memory ---
   --------------------------
   pattern: entity work.pattern_blk
     port map(
-      addra    => delayed_rom_addr,
+      addra    => pattern_addra,
       clka     => i_clka,
-      dina     => rom_dout, -- input from rom, game of life logic, and user input
-      douta    => pattern_douta,
+      dina(0)  => pattern_dina, -- input from rom, game of life logic, and user input
+      douta(0) => pattern_douta,
       ena      => delayed_rom_en,
       wea(0)   => delayed_rom_en,
       addrb    => i_addrb,
