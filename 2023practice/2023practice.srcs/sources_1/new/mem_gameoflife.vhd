@@ -76,6 +76,14 @@ architecture Behavioral of mem_gameoflife is
   signal user_din         : STD_LOGIC;
   signal delayed_user_wen : STD_LOGIC;
   
+  signal gol_buf_en         : STD_LOGIC;
+  signal delayed_gol_buf_en : STD_LOGIC;
+  signal buf_top_out, buf_mid_out: STD_LOGIC_VECTOR(0 DOWNTO 0);
+  signal cell_tl, cell_tm, cell_tr : UNSIGNED(0 DOWNTO 0);
+  signal cell_ml, cell_mm, cell_mr : UNSIGNED(0 DOWNTO 0);
+  signal cell_bl, cell_bm, cell_br : UNSIGNED(0 DOWNTO 0);
+  signal gol_next_gen       : STD_LOGIC;
+  
   signal pattern_addra : STD_LOGIC_VECTOR(GOL_ADDR_WIDTH-1 downto 0);
   signal pattern_dina  : STD_LOGIC;
   signal pattern_douta : STD_LOGIC;
@@ -207,7 +215,61 @@ begin
     );
   
   user_din <= not pattern_douta;
+  
+  ------------------------
+  -- Game of Life Logic --
+  ------------------------
+  gol_buf_top: entity work.shift_reg_en_array(Behavioral)
+    generic map(
+      WIDTH  => 1,
+      LENGTH => GOL_WIDTH-1
+    )
+    port map(
+      i_clk     => i_clka,
+      i_en      => delayed_gol_buf_en, -- something that signals a shift in data
+      i_din(0)  => std_logic(cell_ml(0)), -- the middle left cell
+      o_dout    => buf_top_out  -- the top right cell
+    );
     
+  gol_buf_mid: entity work.shift_reg_en_array(Behavioral)
+    generic map(
+      WIDTH  => 1,
+      LENGTH => GOL_WIDTH-1
+    )
+    port map(
+      i_clk     => i_clka,
+      i_en      => delayed_gol_buf_en, -- something that signals a shift in data
+      i_din(0)  => std_logic(cell_bl(0)), -- the bottom left cell
+      o_dout    => buf_mid_out  -- the middle right cell
+    );
+    
+  cell_tr <= unsigned(buf_top_out);
+  cell_mr <= unsigned(buf_mid_out);
+    
+  gol_buf_en_delay: entity work.shift_reg_array(Behavioral)
+    generic map(
+      WIDTH  => 1,
+      LENGTH => 2
+    )
+    port map(
+      i_clk     => i_clka,
+      i_din(0)  => gol_buf_en,
+      o_dout(0) => delayed_gol_buf_en
+    );
+    
+  gol_buf_en <= not i_mode(0) and not wen;
+  
+  process -- rules for next gen
+    variable gol_sum : UNSIGNED(3 downto 0);
+  begin
+    gol_sum := "0000" + cell_tl + cell_tm + cell_tr + cell_ml + cell_mm + cell_mr + cell_bl + cell_bm + cell_br; -- might need to resize cell bus width
+    if(gol_sum(3 downto 1) = "001") then -- either sum of 2 or 3
+      gol_next_gen <= '1';
+    else
+      gol_next_gen <= '0';
+    end if;
+  end process;
+  
   --------------------------
   -- Game of Life Memory ---
   --------------------------
@@ -226,4 +288,23 @@ begin
       enb      => i_enb,
       web      => "0"
     );
+    
+  process(i_mode, wen) -- addr and din mux
+    variable gol_addr : UNSIGNED(GOL_ADDR_WIDTH-1 downto 0) := gol_x * gol_y;
+  begin
+    if(i_mode = "01") then -- user mode
+      pattern_dina <= user_din;
+      pattern_addra <= i_addra;
+    elsif(i_mode = "11") then -- rom mode
+      pattern_dina <= rom_dout;
+      pattern_addra <= delayed_rom_addr;
+    else -- game of life mode
+      pattern_dina <= gol_next_gen;
+      if(wen = '1') then
+        pattern_addra <= std_logic_vector(gol_addr - to_unsigned(GOL_WIDTH + 3, GOL_ADDR_WIDTH));
+      else
+        pattern_addra <= std_logic_vector(gol_addr);
+      end if;
+    end if;
+  end process;
 end Behavioral;
