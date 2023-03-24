@@ -59,6 +59,7 @@ end mem_gameoflife;
 
 architecture Behavioral of mem_gameoflife is
   constant GOL_WIDTH      : INTEGER := FRAME_WIDTH/8;
+  constant GOL_HEIGHT     : INTEGER := FRAME_HEIGHT/8;
   constant GOL_ADDR_WIDTH : INTEGER := calc_bits_width(GOL_WIDTH * GOL_HEIGHT);
 
   signal gol_x : UNSIGNED(calc_bits_width(GOL_WIDTH)-1 downto 0);
