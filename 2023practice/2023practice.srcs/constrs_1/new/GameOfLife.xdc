@@ -204,10 +204,10 @@ set_property -dict { PACKAGE_PIN Y19  IOSTANDARD LVCMOS33 } [get_ports {o_vsync}
 # User Push Buttons - Bank 34
 # ---------------------------------------------------------------------------- 
 set_property -dict { PACKAGE_PIN P16 IOSTANDARD LVCMOS33 } [get_ports {i_set}];  # "BTNC"
-#set_property -dict { PACKAGE_PIN R16 IOSTANDARD LVCMOS33 } [get_ports {BTND}];  # "BTND"
-#set_property PACKAGE_PIN N15 [get_ports {BTNL}];  # "BTNL"
-#set_property PACKAGE_PIN R18 [get_ports {BTNR}];  # "BTNR"
-#set_property PACKAGE_PIN T18 [get_ports {BTNU}];  # "BTNU"
+set_property -dict { PACKAGE_PIN R16 IOSTANDARD LVCMOS33 } [get_ports {i_down}];  # "BTND"
+set_property -dict { PACKAGE_PIN N15 IOSTANDARD LVCMOS33 } [get_ports {i_left}];  # "BTNL"
+set_property -dict { PACKAGE_PIN R18 IOSTANDARD LVCMOS33 } [get_ports {i_right}];  # "BTNR"
+set_property -dict { PACKAGE_PIN T18 IOSTANDARD LVCMOS33 } [get_ports {i_up}];  # "BTNU"
 
 # ----------------------------------------------------------------------------
 # USB OTG Reset - Bank 34
