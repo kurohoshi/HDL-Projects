@@ -92,15 +92,6 @@ architecture Behavioral of VGA_Project is
   
   signal active_buf : STD_LOGIC_VECTOR(1 downto 0);
     
---  signal rom_addr   : STD_LOGIC_VECTOR(12 downto 0); -- addr width dependent on number of total cells
---  signal rom_dout   : STD_LOGIC_VECTOR(0 downto 0);
---  signal rom_en     : STD_LOGIC;
---  signal r_addr     : STD_LOGIC_VECTOR(12 downto 0);
---  signal r_data     : STD_LOGIC_VECTOR(0 downto 0);
---  signal r_en       : STD_LOGIC;
-  
---  signal delayed_rom_en   : STD_LOGIC;
---  signal delayed_rom_addr : STD_LOGIC_VECTOR(12 downto 0);
   signal delayed_active   : STD_LOGIC;
   
   signal pattern_addrb : STD_LOGIC_VECTOR(MEM_ADDR_WIDTH-1 downto 0);
@@ -279,9 +270,9 @@ begin
       i_reset => i_reset
     );
     
-  pattern_addrb <= std_logic_vector((unsigned(y_pos(V_BIT_WIDTH-1 downto 3)) * to_unsigned(FRAME_WIDTH/8, H_BIT_WIDTH-3)) + unsigned(x_pos(H_BIT_WIDTH-1 downto 3)));
+  pattern_addrb <= std_logic_vector((unsigned(y_pos(y_pos'high downto 3)) * to_unsigned(FRAME_WIDTH/8, H_BIT_WIDTH-3)) + unsigned(x_pos(x_pos'high downto 3)));
   delayed_active <= active or active_buf(0) or active_buf(1); -- keep enabled for 2 extra clocks
-  
+
   -- should be a black display until init button is pressed
   u_cursor <= '1' when user_addr = delayed_pattern_addrb and i_mode = "01" else '0';
   o_red   <= (others => active_buf(0) and (pattern_doutb or u_cursor));
