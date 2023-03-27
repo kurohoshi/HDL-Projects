@@ -98,57 +98,32 @@ architecture Behavioral of vga_driver is
 begin
   process(i_reset, i_pxl_clk)
   begin
-    if(i_reset = '1') then
-      h_counter <= (others => '0');
-      v_counter <= (others => '0');
-    elsif(rising_edge(i_pxl_clk)) then
-      if(h_counter < H_MAX) then
-        h_counter <= h_counter + 1;
-      else
+    if(rising_edge(i_pxl_clk)) then
+      if(i_reset = '1') then
         h_counter <= (others => '0');
-        if(v_counter < V_MAX) then
-          v_counter <= v_counter + 1;
+        v_counter <= (others => '0');
+      else
+        if(h_counter < H_MAX-1) then
+          h_counter <= h_counter + 1;
         else
-          v_counter <= (others => '0');
+          h_counter <= (others => '0');
+          if(v_counter < V_MAX-1) then
+            v_counter <= v_counter + 1;
+          else
+            v_counter <= (others => '0');
+          end if;
         end if;
       end if;
     end if;
   end process;
   
-  process(i_reset, h_counter, v_counter, active)
-  begin
-    if(i_reset = '1') then
-      active <= '0';
-    elsif(h_counter < FRAME_WIDTH and v_counter < FRAME_HEIGHT) then
-      active <= '1';
-    else
-      active <= '0';
-    end if;
+  active <= '1' when h_counter < FRAME_WIDTH and v_counter < FRAME_HEIGHT and i_reset = '0' else '0';
+ 
+  o_hsync <= '0' when h_counter >= H_SYNC_START and h_counter < H_SYNC_END and i_reset = '0' else '1';
+  o_vsync <= '0' when v_counter >= V_SYNC_START and v_counter < V_SYNC_END and i_reset = '0' else '1';
   
-    if(i_reset = '1') then
-      o_hsync <= '1';
-    elsif(h_counter >= H_SYNC_START and h_counter < H_SYNC_END) then
-      o_hsync <= '0';
-    else
-      o_hsync <= '1';
-    end if;
-    
-    if(i_reset = '1') then
-      o_vsync <= '1';
-    elsif(v_counter >= V_SYNC_START and v_counter < V_SYNC_END) then
-      o_vsync <= '0';
-    else
-      o_vsync <= '1';
-    end if;
-    
-    if(active = '1') then
-      o_xpos <= STD_LOGIC_VECTOR(h_xpos);
-      o_ypos <= STD_LOGIC_VECTOR(v_ypos);
-    else
-      o_xpos <= (others => '0');
-      o_ypos <= (others => '0');
-    end if;
-  end process;
+  o_xpos <= STD_LOGIC_VECTOR(h_xpos) when active = '1' else (others => '0');
+  o_ypos <= STD_LOGIC_VECTOR(v_ypos) when active = '1' else (others => '0');
   
   o_active <= active;
 end Behavioral;
