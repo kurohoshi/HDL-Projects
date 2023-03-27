@@ -24,7 +24,7 @@ use IEEE.STD_LOGIC_1164.ALL;
 
 -- Uncomment the following library declaration if using
 -- arithmetic functions with Signed or Unsigned values
---use IEEE.NUMERIC_STD.ALL;
+use IEEE.NUMERIC_STD.ALL;
 
 -- Uncomment the following library declaration if instantiating
 -- any Xilinx leaf cells in this code.
@@ -58,7 +58,10 @@ architecture test of vga_driver_tb is
   signal h_sync : STD_LOGIC;
   signal v_sync : STD_LOGIC;
   signal x_pos  : STD_LOGIC_VECTOR(H_BIT_WIDTH-1 downto 0);
-  signal y_pos  : STD_LOGIC_VECTOR(V_BIT_WIDTH-1 downto 0); 
+  signal y_pos  : STD_LOGIC_VECTOR(V_BIT_WIDTH-1 downto 0);
+  
+  signal addr_full : STD_LOGIC_VECTOR(H_BIT_WIDTH+V_BIT_WIDTH-1 downto 0);
+  signal addr_gol  : STD_LOGIC_VECTOR(H_BIT_WIDTH+V_BIT_WIDTH-7 downto 0);
 begin
   -- make clock divider
   -- make BRAM module
@@ -94,6 +97,9 @@ begin
       o_xpos    => x_pos,
       o_ypos    => y_pos
     );
+    
+  addr_full <= std_logic_vector((unsigned(y_pos) * to_unsigned(FRAME_WIDTH, H_BIT_WIDTH)) + unsigned(x_pos)); 
+  addr_gol  <= std_logic_vector((unsigned(y_pos(y_pos'high downto 3)) * to_unsigned(FRAME_WIDTH/8, H_BIT_WIDTH-3)) + unsigned(x_pos(x_pos'high downto 3)));
 
   reset <= '0' after 10ns;
   
