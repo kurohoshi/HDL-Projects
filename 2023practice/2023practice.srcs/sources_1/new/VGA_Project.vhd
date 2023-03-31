@@ -80,8 +80,8 @@ architecture Behavioral of VGA_Project is
   signal pxl_clk : STD_LOGIC;
   
   signal user_in   : STD_LOGIC;
-  signal user_x : UNSIGNED(calc_bits_width(MEM_WIDTH)-1 downto 0)  := (others => '0'); 
-  signal user_y : UNSIGNED(calc_bits_width(MEM_HEIGHT)-1 downto 0) := (others => '0'); 
+  signal user_x : UNSIGNED(calc_bits_width(MEM_WIDTH)-1 downto 0); 
+  signal user_y : UNSIGNED(calc_bits_width(MEM_HEIGHT)-1 downto 0); 
   signal user_addr : STD_LOGIC_VECTOR(MEM_ADDR_WIDTH-1 downto 0);
   
   signal active : STD_LOGIC;
@@ -145,11 +145,14 @@ begin
     );
     
   -- user input
-  user_cursor: process(i_clk)
+  user_cursor: process(i_reset, i_clk)
     type t_init_state IS(idle, active);
     variable s_user : t_init_state := idle;
   begin
-    if(rising_edge(i_clk)) then
+    if(i_reset = '1') then
+      user_x <= (others => '0');
+      user_y <= (others => '0');
+    elsif(rising_edge(i_clk)) then
       if(i_mode = "01") then
         if(s_user = active) then
           if(debounced_up = '1') then
@@ -257,7 +260,7 @@ begin
       o_dout => delayed_pattern_addrb
     );
     
-  module_gameoflife: entity work.mem_gameoflife(Behavioral)
+  module_gol: entity work.mem_gameoflife(Behavioral)
     port map(
       i_addra => user_addr,
       i_clka  => i_clk,

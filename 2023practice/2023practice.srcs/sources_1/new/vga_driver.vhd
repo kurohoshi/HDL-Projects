@@ -90,28 +90,24 @@ architecture Behavioral of vga_driver is
   constant V_MAX        : INTEGER := FRAME_HEIGHT + V_FRONT_PORCH + V_SYNC_PULSE + V_BACK_PORCH;
   
   signal h_counter : UNSIGNED(calc_bits_width(H_MAX)-1 downto 0);
-  alias  h_xpos : UNSIGNED(calc_bits_width(FRAME_WIDTH)-1 downto 0) is h_counter(calc_bits_width(FRAME_WIDTH)-1 downto 0);
   signal v_counter : UNSIGNED(calc_bits_width(V_MAX)-1 downto 0);
-  alias  v_ypos : UNSIGNED(calc_bits_width(FRAME_HEIGHT)-1 downto 0) is v_counter(calc_bits_width(FRAME_HEIGHT)-1 downto 0);
   
   signal active : STD_LOGIC;
 begin
   process(i_reset, i_pxl_clk)
   begin
-    if(rising_edge(i_pxl_clk)) then
-      if(i_reset = '1') then
-        h_counter <= (others => '0');
-        v_counter <= (others => '0');
+    if(i_reset = '1') then
+      h_counter <= (others => '0');
+      v_counter <= (others => '0');
+    elsif(rising_edge(i_pxl_clk)) then
+      if(h_counter < H_MAX-1) then
+        h_counter <= h_counter + 1;
       else
-        if(h_counter < H_MAX-1) then
-          h_counter <= h_counter + 1;
+        h_counter <= (others => '0');
+        if(v_counter < V_MAX-1) then
+          v_counter <= v_counter + 1;
         else
-          h_counter <= (others => '0');
-          if(v_counter < V_MAX-1) then
-            v_counter <= v_counter + 1;
-          else
-            v_counter <= (others => '0');
-          end if;
+          v_counter <= (others => '0');
         end if;
       end if;
     end if;
@@ -122,8 +118,8 @@ begin
   o_hsync <= '0' when h_counter >= H_SYNC_START and h_counter < H_SYNC_END and i_reset = '0' else '1';
   o_vsync <= '0' when v_counter >= V_SYNC_START and v_counter < V_SYNC_END and i_reset = '0' else '1';
   
-  o_xpos <= STD_LOGIC_VECTOR(h_xpos) when active = '1' else (others => '0');
-  o_ypos <= STD_LOGIC_VECTOR(v_ypos) when active = '1' else (others => '0');
+  o_xpos <= STD_LOGIC_VECTOR(h_counter(o_xpos'range)) when active = '1' else (others => '0');
+  o_ypos <= STD_LOGIC_VECTOR(v_counter(o_ypos'range)) when active = '1' else (others => '0');
   
   o_active <= active;
 end Behavioral;
