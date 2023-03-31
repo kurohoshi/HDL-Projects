@@ -50,12 +50,14 @@ architecture Behavioral of shift_reg_en_array is
 begin
   process(i_clk)
   begin
-    if(rising_edge(i_clk) and i_en = '1') then
-      arr_data(0) <= i_din;
-      if(LENGTH > 1) then
-        for i in arr_data'low+1 to arr_data'high loop
-          arr_data(i) <= arr_data(i-1);
-        end loop;
+    if(rising_edge(i_clk)) then
+      if(i_en = '1') then
+        arr_data(0) <= i_din;
+        if(LENGTH > 1) then
+          for i in 1 to arr_data'high loop
+            arr_data(i) <= arr_data(i-1);
+          end loop;
+        end if;
       end if;
     end if;
   end process;
