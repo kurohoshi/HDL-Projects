@@ -64,7 +64,7 @@ begin
     begin
       wait for 100ns;
       reset <= '0';
-      wait for 15ms;
+      wait for 1ms;
       init <= '1';
 --      wait for 1ns;
 --      init <= '0';

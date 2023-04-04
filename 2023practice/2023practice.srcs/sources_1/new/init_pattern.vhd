@@ -61,6 +61,7 @@ architecture Behavioral of init_pattern is
   
   constant H_BIT_WIDTH : INTEGER := calc_bits_width(FRAME_WIDTH);
   constant V_BIT_WIDTH : INTEGER := calc_bits_width(FRAME_HEIGHT);
+  constant ADDR_WIDTH : INTEGER := calc_bits_width((FRAME_WIDTH/8) * (FRAME_HEIGHT/8));
   
   signal pxl_clk : STD_LOGIC;
   
@@ -72,19 +73,19 @@ architecture Behavioral of init_pattern is
   
   signal active_buf : STD_LOGIC_VECTOR(1 downto 0);
     
-  signal rom_addr   : STD_LOGIC_VECTOR(12 downto 0); -- addr width dependent on number of total cells
+  signal rom_addr   : STD_LOGIC_VECTOR(ADDR_WIDTH-1 downto 0);
   signal rom_dout   : STD_LOGIC_VECTOR(0 downto 0);
   signal rom_en     : STD_LOGIC;
-  signal r_addr     : STD_LOGIC_VECTOR(12 downto 0);
+  signal r_addr     : STD_LOGIC_VECTOR(ADDR_WIDTH-1 downto 0);
   signal r_data     : STD_LOGIC_VECTOR(0 downto 0);
   signal r_en       : STD_LOGIC;
   
   signal delayed_rom_en   : STD_LOGIC;
-  signal delayed_rom_addr : STD_LOGIC_VECTOR(12 downto 0);
+  signal delayed_rom_addr : STD_LOGIC_VECTOR(ADDR_WIDTH-1 downto 0);
   signal delayed_active   : STD_LOGIC;
   
   signal pattern_douta : STD_LOGIC_VECTOR(0 downto 0);
-  signal pattern_addrb : STD_LOGIC_VECTOR(12 downto 0); -- addr width dependent on number of total cells
+  signal pattern_addrb : STD_LOGIC_VECTOR(ADDR_WIDTH-1 downto 0);
   signal pattern_doutb : STD_LOGIC_VECTOR(0 downto 0);
 begin
   -- generate pixel clock, this determines the framerate of video output
@@ -163,7 +164,7 @@ begin
     type t_init_state IS(idle, active, done);
     variable s_init : t_init_state := idle;
     
-    variable rom_addr_counter : UNSIGNED(rom_addr'range);
+    
   begin
     if(rising_edge(i_clk)) then
       if(s_init = idle) then
@@ -171,11 +172,10 @@ begin
           rom_en <= '1';
           s_init := active;
         end if;
-        rom_addr_counter := (others => '0');
+        rom_addr <= (others => '0');
       elsif(s_init = active) then
-        if(rom_addr_counter < ROM_MAX) then
-          rom_addr <= STD_LOGIC_VECTOR(rom_addr_counter);
-          rom_addr_counter := rom_addr_counter + "1";
+        if(unsigned(rom_addr) < ROM_MAX-1) then
+          rom_addr <= std_logic_vector(unsigned(rom_addr) + "1");
         else
           rom_en <= '0';
           s_init := done;
