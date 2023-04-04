@@ -41,9 +41,9 @@ use work.utils.all;
 
 entity mem_gameoflife is
   Generic(
-    FRAME_WIDTH   : INTEGER := 640;
-    FRAME_HEIGHT  : INTEGER := 480;
-    ADDR_WIDTH    : INTEGER := 13
+    FRAME_WIDTH  : INTEGER := 640;
+    FRAME_HEIGHT : INTEGER := 480;
+    ADDR_WIDTH   : INTEGER := 13
   );
   Port(
     i_addra : in  STD_LOGIC_VECTOR (ADDR_WIDTH-1 downto 0);
@@ -59,6 +59,7 @@ entity mem_gameoflife is
 end mem_gameoflife;
 
 architecture Behavioral of mem_gameoflife is
+  constant MEM_DELAY      : INTEGER := 3;
   constant GOL_WIDTH      : INTEGER := FRAME_WIDTH/8;
   constant GOL_HEIGHT     : INTEGER := FRAME_HEIGHT/8;
   constant GOL_ADDR_WIDTH : INTEGER := calc_bits_width(GOL_WIDTH * GOL_HEIGHT);
@@ -73,7 +74,8 @@ architecture Behavioral of mem_gameoflife is
   signal ren    : STD_LOGIC;
   signal wen    : STD_LOGIC;
   signal delayed_ren   : STD_LOGIC;
-  signal delayed_wen  : STD_LOGIC;
+  signal delayed_wen1  : STD_LOGIC;
+  signal delayed_wen2  : STD_LOGIC;
   signal s_flag : STD_LOGIC_VECTOR(1 downto 0);
 
   signal rom_addr : STD_LOGIC_VECTOR(GOL_ADDR_WIDTH-1 downto 0);
@@ -84,10 +86,11 @@ architecture Behavioral of mem_gameoflife is
 
   signal user_din : STD_LOGIC;
   
-  signal set_zero         : STD_LOGIC;
-  signal delayed_set_zero : STD_LOGIC;
-  signal gol_in           : STD_LOGIC_VECTOR(0 DOWNTO 0);
-  signal gol_buf_en       : STD_LOGIC;
+  signal set_zero           : STD_LOGIC;
+  signal delayed_set_zero   : STD_LOGIC;
+  signal gol_in             : STD_LOGIC_VECTOR(0 DOWNTO 0);
+  signal gol_buf_en         : STD_LOGIC;
+  signal delayed_gol_buf_en : STD_LOGIC;
   signal buf_top_in, buf_mid_in    : STD_LOGIC_VECTOR(0 DOWNTO 0);
   signal buf_top_out, buf_mid_out  : STD_LOGIC_VECTOR(0 DOWNTO 0);
   signal cell_tl, cell_tm, cell_tr : UNSIGNED(0 DOWNTO 0);
@@ -131,13 +134,14 @@ begin
             ren <= '1';
             wen <= '0';
             set_zero <= '1';
+            gol_buf_en <= '1';
             s_gol <= gol_init;
           end if;
           
           s_flag <= i_mode;
         end if;
       elsif(s_gol = gol_init) then -- initialize row -1
-        if(gol_x < GOL_WIDTH) then
+        if(gol_x < GOL_WIDTH+1) then
           gol_x <= gol_x + 1;
         else
           gol_x <= (others => '0');
@@ -145,64 +149,63 @@ begin
           s_gol <= gol_load;
         end if;
       elsif(s_gol = gol_load) then -- load into register
-        if(gol_x > 2 and gol_y > 0) then
+        if(gol_x > 0 and gol_y > 0) then
           wen <= '1';
-          s_gol <= gol_save;
         else
-          if(gol_x < GOL_WIDTH) then
-            gol_x <= gol_x + 1;
-          else
-            gol_x <= (others => '0');
-            gol_y <= gol_y + 1;
---            if(gol_y < GOL_HEIGHT) then
---              gol_y <= gol_y + 1;
---            else
---              gol_y <= (others => '0');
---            end if;
-          end if;
+          wen <= '0';
         end if;
+        
+        gol_buf_en <= '0';
+        s_gol <= gol_save;
       elsif(s_gol = gol_save) then -- write next gen into mem
         if(gol_x < GOL_WIDTH) then
           gol_x <= gol_x + 1;
-          wen <= '0';
+          gol_buf_en <= '1';
           s_gol <= gol_load;
         else
           gol_x <= (others => '0');
           gol_y <= gol_y + 1;
           if(gol_y < GOL_HEIGHT-1) then
-            wen <= '0';
+            gol_buf_en <= '1';
             s_gol <= gol_load;
           else
-            set_zero <= '1';
+            ren <= '0';
+            gol_buf_en <= '1';
             s_gol <= gol_end_load;
           end if;
         end if;
-      elsif(s_gol = gol_end_load) then -- load 0 into register
-        if(gol_x > 2) then
-          wen <= '1';
-          s_gol <= gol_end_save;
+
+        if(gol_x = GOL_WIDTH-1 or gol_y = GOL_HEIGHT) then -- load 0 into register
+          set_zero <= '1';
         else
-          if(gol_x < GOL_WIDTH) then
-            gol_x <= gol_x + 1;
-          else
-            gol_x <= (others => '0');
-          end if;
+          set_zero <= '0';
         end if;
+        
+        wen <= '0';
+      elsif(s_gol = gol_end_load) then
+        ren <= '1';
+        wen <= '1';
+        gol_buf_en <= '0';
+        s_gol <= gol_end_save;
       elsif(s_gol = gol_end_save) then -- write last row of next gen into mem
         if(gol_x < GOL_WIDTH) then
           gol_x <= gol_x + 1;
+          ren <= '0';
           wen <= '0';
+          gol_buf_en <= '1';
           s_gol <= gol_end_load;
         else
           gol_x <= (others => '0');
           gol_y <= (others => '0');
+          gol_buf_en <= '1';
           s_gol <= gol_done;
         end if;
       elsif(s_gol = gol_done) then -- finish writing last couple of cells into mem
-        if(state_delay = 2) then
+        if(state_delay = MEM_DELAY) then
           ren <= '0';
           wen <= '0';
           set_zero <= '0';
+          gol_buf_en <= '0';
           if(i_set = '0') then
             state_delay := "00";
             s_gol <= idle;
@@ -222,7 +225,7 @@ begin
           s_gol <= done;
         end if;
       elsif(s_gol = done) then
-        if(state_delay = 1) then
+        if(state_delay = MEM_DELAY-1) then
           ren <= '0';
           if(i_set = '0') then
             state_delay := "00";
@@ -238,7 +241,7 @@ begin
   ren_delay: entity work.shift_reg_array(Behavioral)
     generic map(
       WIDTH  => 1,
-      LENGTH => 2
+      LENGTH => MEM_DELAY
     )
     port map(
       i_clk     => i_clka,
@@ -246,26 +249,48 @@ begin
       o_dout(0) => delayed_ren
     );
 
-  wen_delay: entity work.shift_reg_array(Behavioral)
+  wen_delay1: entity work.shift_reg_array(Behavioral)
     generic map(
       WIDTH  => 1,
-      LENGTH => 2
+      LENGTH => MEM_DELAY
     )
     port map(
       i_clk     => i_clka,
       i_din(0)  => wen,
-      o_dout(0) => delayed_wen
+      o_dout(0) => delayed_wen1
+    );
+
+  wen_delay2: entity work.shift_reg_array(Behavioral)
+    generic map(
+      WIDTH  => 1,
+      LENGTH => 1
+    )
+    port map(
+      i_clk     => i_clka,
+      i_din(0)  => delayed_wen1,
+      o_dout(0) => delayed_wen2
     );
     
   set_zero_delay: entity work.shift_reg_array(Behavioral)
     generic map(
       WIDTH  => 1,
-      LENGTH => 2
+      LENGTH => MEM_DELAY
     )
     port map(
       i_clk     => i_clka,
       i_din(0)  => set_zero,
       o_dout(0) => delayed_set_zero
+    );
+    
+  gol_buf_en_delay: entity work.shift_reg_array(Behavioral)
+    generic map(
+      WIDTH  => 1,
+      LENGTH => MEM_DELAY
+    )
+    port map(
+      i_clk     => i_clka,
+      i_din(0)  => gol_buf_en,
+      o_dout(0) => delayed_gol_buf_en
     );
     
   ---------
@@ -304,7 +329,7 @@ begin
   gol_x_delay: entity work.shift_reg_array(Behavioral)
     generic map(
       WIDTH  => gol_x'length,
-      LENGTH => 2
+      LENGTH => MEM_DELAY
     )
     port map(
       i_clk  => i_clka,
@@ -315,7 +340,7 @@ begin
   gol_y_delay: entity work.shift_reg_array(Behavioral)
     generic map(
       WIDTH  => gol_y'length,
-      LENGTH => 2
+      LENGTH => MEM_DELAY
     )
     port map(
       i_clk  => i_clka,
@@ -330,7 +355,7 @@ begin
     )
     port map(
       i_clk  => i_clka,
-      i_en   => gol_buf_en,
+      i_en   => delayed_gol_buf_en,
       i_din  => buf_top_in,
       o_dout => buf_top_out
     );
@@ -342,7 +367,7 @@ begin
     )
     port map(
       i_clk  => i_clka,
-      i_en   => gol_buf_en,
+      i_en   => delayed_gol_buf_en,
       i_din  => buf_mid_in,
       o_dout => buf_mid_out
     );
@@ -356,7 +381,7 @@ begin
   process(i_clka)
   begin
     if(rising_edge(i_clka)) then
-      if(gol_buf_en = '1') then
+      if(delayed_gol_buf_en = '1') then
         cell_br <= unsigned(gol_in);
         cell_bm <= cell_br;
         cell_bl <= cell_bm;
@@ -369,8 +394,6 @@ begin
       end if;
     end if;
   end process;
-    
-  gol_buf_en <= not s_flag(0) and not delayed_wen and delayed_ren;
   
   -- rules for next gen
   gol_sum <= "0000" + cell_tl + cell_tm + cell_tr + cell_ml + cell_mr + cell_bl + cell_bm + cell_br;
@@ -406,13 +429,14 @@ begin
       gol_addr when others;             -- gol
       
   with s_flag(0) select
-    pattern_wea <= delayed_wen when '1', -- user and rom
-      wen when others;                   -- gol
+    pattern_wea <= delayed_wen1 when '1', -- user and rom
+      delayed_wen2 when others;           -- gol
 
   pattern_ena <= ren and (s_flag(0) or not set_zero);
 
   gol_addr_read  <= STD_LOGIC_VECTOR((unsigned(gol_y) * to_unsigned(GOL_WIDTH, gol_x'length)) + unsigned(gol_x));
-  gol_buf_addr_read <= STD_LOGIC_VECTOR((unsigned(delayed_gol_y) * to_unsigned(GOL_WIDTH, delayed_gol_x'length)) + unsigned(delayed_gol_x));
+
+  gol_buf_addr_read <= STD_LOGIC_VECTOR((unsigned(delayed_gol_y) * to_unsigned(GOL_WIDTH, delayed_gol_x'length)) + unsigned(delayed_gol_x)); -- can use gol_addr_read to carry addr to next stage
   gol_addr_write <= STD_LOGIC_VECTOR(unsigned(delayed_gol_buf_addr_read) - to_unsigned(GOL_WIDTH + 1, delayed_gol_buf_addr_read'length));
   gol_addr_write_delay: entity work.shift_reg_en_array(Behavioral)
     generic map(
@@ -421,12 +445,12 @@ begin
     )
     port map(
       i_clk  => i_clka,
-      i_en   => gol_buf_en,
+      i_en   => delayed_gol_buf_en,
       i_din  => gol_buf_addr_read,
       o_dout => delayed_gol_buf_addr_read
     );
   
-  with wen select
+  with delayed_wen2 select
     gol_addr <= gol_addr_read when '0', -- read addr
       gol_addr_write when others; -- write addr
 end Behavioral;
