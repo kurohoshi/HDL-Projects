@@ -71,17 +71,8 @@ architecture Behavioral of VGA_Project is
   constant MEM_HEIGHT     : INTEGER := FRAME_HEIGHT/8;
   constant MEM_ADDR_WIDTH : INTEGER := calc_bits_width(MEM_WIDTH) + calc_bits_width(MEM_HEIGHT);
   
-  signal debounced_set   : STD_LOGIC;
-  signal debounced_up    : STD_LOGIC;
-  signal debounced_down  : STD_LOGIC;
-  signal debounced_left  : STD_LOGIC;
-  signal debounced_right : STD_LOGIC;
-  
   signal pxl_clk : STD_LOGIC;
   
-  signal user_in   : STD_LOGIC;
-  signal user_x : UNSIGNED(calc_bits_width(MEM_WIDTH)-1 downto 0); 
-  signal user_y : UNSIGNED(calc_bits_width(MEM_HEIGHT)-1 downto 0); 
   signal user_addr : STD_LOGIC_VECTOR(MEM_ADDR_WIDTH-1 downto 0);
   
   signal active : STD_LOGIC;
@@ -92,7 +83,7 @@ architecture Behavioral of VGA_Project is
   
   signal active_buf : STD_LOGIC_VECTOR(1 downto 0);
     
-  signal delayed_active   : STD_LOGIC;
+  signal delayed_active : STD_LOGIC;
   
   signal pattern_addrb : STD_LOGIC_VECTOR(MEM_ADDR_WIDTH-1 downto 0);
   signal delayed_pattern_addrb : STD_LOGIC_VECTOR(MEM_ADDR_WIDTH-1 downto 0);
@@ -100,41 +91,6 @@ architecture Behavioral of VGA_Project is
   
   signal u_cursor : STD_LOGIC;
 begin
-  -- debounce all mechanical inputs
-  set_debounce: entity work.debouncer(Behavioral)
-    port map(
-      i_in  => i_set,
-      i_clk => i_clk,
-      o_out => debounced_set
-    );
-    
-  up_debounce: entity work.debouncer(Behavioral)
-    port map(
-      i_in  => i_up,
-      i_clk => i_clk,
-      o_out => debounced_up
-    );
-    
-  down_debounce: entity work.debouncer(Behavioral)
-    port map(
-      i_in  => i_down,
-      i_clk => i_clk,
-      o_out => debounced_down
-    );
-    
-  left_debounce: entity work.debouncer(Behavioral)
-    port map(
-      i_in  => i_left,
-      i_clk => i_clk,
-      o_out => debounced_left
-    );
-    
-  right_debounce: entity work.debouncer(Behavioral)
-    port map(
-      i_in  => i_right,
-      i_clk => i_clk,
-      o_out => debounced_right
-    );
 
   -- generate pixel clock, this determines the framerate of video output
   pxl_clk_gen: entity work.clk_wiz_0
@@ -145,56 +101,17 @@ begin
     );
     
   -- user input
-  user_cursor: process(i_reset, i_clk)
-    type t_init_state IS(idle, active);
-    variable s_user : t_init_state := idle;
-  begin
-    if(i_reset = '1') then
-      user_x <= (others => '0');
-      user_y <= (others => '0');
-    elsif(rising_edge(i_clk)) then
-      if(i_mode = "01") then
-        if(s_user = active) then
-          if(debounced_up = '1') then
-            if(user_y = 0) then
-              user_y <= to_unsigned(MEM_HEIGHT-1, user_y'length);
-            else
-              user_y <= user_y - 1;
-            end if;
-          elsif(debounced_down = '1') then
-            if(user_y = MEM_HEIGHT-1) then
-              user_y <= to_unsigned(0, user_y'length);
-            else
-              user_y <= user_y + 1;
-            end if;
-          elsif(debounced_left = '1') then
-            if(user_x = 0) then
-              user_x <= to_unsigned(MEM_WIDTH-1, user_x'length);
-            else
-              user_x <= user_x - 1;
-            end if;
-          elsif(debounced_right = '1') then
-            if(user_x = MEM_WIDTH-1) then
-              user_x <= to_unsigned(0, user_x'length);
-            else
-              user_x <= user_x + 1;
-            end if;
-          end if;
-          
-          if(user_in = '1') then
-            s_user := idle;
-          end if;
-        elsif(s_user = idle) then
-          if(user_in = '0') then
-            s_user := active;
-          end if;
-        end if;
-      end if;
-    end if;
-  end process;
-  
-  user_in <= debounced_up or debounced_down or debounced_left or debounced_right;
-  user_addr <= STD_LOGIC_VECTOR((user_y * to_unsigned(MEM_WIDTH, user_x'length)) + user_x);
+  user_ctrl: entity work.User_Control(Behavioral)
+    port map(
+      i_clk   => i_clk,
+      i_reset => i_reset,
+      i_mode  => i_mode,
+      i_up    => i_up,
+      i_down  => i_down,
+      i_left  => i_left,
+      i_right => i_right,
+      o_addr  => user_addr
+    );
   
   -- drive VGA signals
   vga_driver: entity work.vga_driver(Behavioral)
@@ -269,7 +186,7 @@ begin
       o_doutb => pattern_doutb,
       i_enb   => delayed_active,
       i_mode  => i_mode,
-      i_set   => debounced_set,
+      i_set   => i_set,
       i_reset => i_reset
     );
     

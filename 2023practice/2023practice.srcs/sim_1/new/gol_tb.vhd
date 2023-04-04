@@ -84,84 +84,164 @@ begin
     wait for 100ns;
     
     mode <= "01";
-    wait for 800us;
-    
-    down <= '1';
-    wait for 800us;
-    down <= '0';
-    wait for 800us;
-    
-    down <= '1';
-    wait for 800us;
-    down <= '0';
-    wait for 800us;
+    wait for 1us;
     
     right <= '1';
-    wait for 800us;
+    wait for 1us;
     right <= '0';
-    wait for 800us;
-    
-    right <= '1';
-    wait for 800us;
-    right <= '0';
-    wait for 800us;
-    
-    set <= '1';
-    wait for 800us;
-    set <= '0';
-    wait for 800us;
+    wait for 1us;
     
     down <= '1';
-    wait for 800us;
+    wait for 1us;
     down <= '0';
-    wait for 800us;
+    wait for 1us;
+    
+    for i in 1 to 3 loop
+      set <= '1';
+      wait for 1us;
+      set <= '0';
+      wait for 1us;
+      
+      left <= '1';
+      wait for 1us;
+      left <= '0';
+      wait for 1us;
+    end loop;
     
     set <= '1';
-    wait for 800us;
+    wait for 1us;
     set <= '0';
-    wait for 800us;
-    
-    right <= '1';
-    wait for 800us;
-    right <= '0';
-    wait for 800us;
-    
-    set <= '1';
-    wait for 800us;
-    set <= '0';
-    wait for 800us;
-    
+    wait for 1us;
+
     up <= '1';
-    wait for 800us;
+    wait for 1us;
     up <= '0';
-    wait for 800us;
-    
+    wait for 1us;
+
+    for i in 1 to 3 loop
+      set <= '1';
+      wait for 1us;
+      set <= '0';
+      wait for 1us;
+      
+      right <= '1';
+      wait for 1us;
+      right <= '0';
+      wait for 1us;
+    end loop;
+
     set <= '1';
-    wait for 800us;
+    wait for 1us;
     set <= '0';
-    wait for 800us;
+    wait for 1us;
+
+    up <= '1';
+    wait for 1us;
+    up <= '0';
+    wait for 1us;
+
+    for i in 1 to 3 loop
+      set <= '1';
+      wait for 1us;
+      set <= '0';
+      wait for 1us;
+      
+      left <= '1';
+      wait for 1us;
+      left <= '0';
+      wait for 1us;
+    end loop;
+
+    set <= '1';
+    wait for 1us;
+    set <= '0';
+    wait for 1us;
+
+    up <= '1';
+    wait for 1us;
+    up <= '0';
+    wait for 1us;
+
+    for i in 1 to 3 loop
+      set <= '1';
+      wait for 1us;
+      set <= '0';
+      wait for 1us;
+      
+      right <= '1';
+      wait for 1us;
+      right <= '0';
+      wait for 1us;
+    end loop;
+
+    set <= '1';
+    wait for 1us;
+    set <= '0';
+    wait for 1us;
+
+    -- down <= '1';
+    -- wait for 700us;
+    -- down <= '0';
+    -- wait for 700us;
+    
+    -- down <= '1';
+    -- wait for 700us;
+    -- down <= '0';
+    -- wait for 700us;
+    
+    -- right <= '1';
+    -- wait for 700us;
+    -- right <= '0';
+    -- wait for 700us;
+    
+    -- right <= '1';
+    -- wait for 700us;
+    -- right <= '0';
+    -- wait for 700us;
+    
+    -- set <= '1';
+    -- wait for 700us;
+    -- set <= '0';
+    -- wait for 700us;
+    
+    -- down <= '1';
+    -- wait for 700us;
+    -- down <= '0';
+    -- wait for 700us;
+    
+    -- set <= '1';
+    -- wait for 700us;
+    -- set <= '0';
+    -- wait for 700us;
+    
+    -- right <= '1';
+    -- wait for 700us;
+    -- right <= '0';
+    -- wait for 700us;
+    
+    -- set <= '1';
+    -- wait for 700us;
+    -- set <= '0';
+    -- wait for 700us;
+    
+    -- up <= '1';
+    -- wait for 700us;
+    -- up <= '0';
+    -- wait for 700us;
+    
+    -- set <= '1';
+    -- wait for 700us;
+    -- set <= '0';
+    -- wait for 700us;
+    
     
     mode <= "00";
-    wait for 800us;
+    wait for 50us;
     
     set <= '1';
-    wait for 800us;
+    wait for 100us;
     set <= '0';
-    wait for 800us;
-    
---    wait for 2000ns;
---    mode <= "11";
---    wait for 100ns;
---    set <= '1';
---    wait for 20ns;
---    set <= '0';
-    
---    wait for 100000ns;
---    mode <= "00";
---    wait for 100ns;
---    set <= '1';
---    wait for 20ns;
---    set <= '0';
+    wait for 200us;
     
     wait;
   end process;
