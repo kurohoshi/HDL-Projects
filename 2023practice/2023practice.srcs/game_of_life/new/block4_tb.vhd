@@ -8,7 +8,7 @@
 -- Project Name: 
 -- Target Devices: 
 -- Tool Versions: 
--- Description: 
+-- Description: Simple testbench with a block in each corner to test still life
 -- 
 -- Dependencies: 
 -- 
@@ -31,10 +31,10 @@ use IEEE.STD_LOGIC_1164.ALL;
 --library UNISIM;
 --use UNISIM.VComponents.all;
 
-entity gol_tb is
-end gol_tb;
+entity block4_tb is
+end block4_tb;
 
-architecture test of gol_tb is
+architecture test of block4_tb is
   constant ADDR_WIDTH : INTEGER := 13;
   
   signal clk   : STD_LOGIC := '0';
@@ -74,6 +74,7 @@ begin
       o_blue  => blue
     );
 
+  -- 2x2 in all corners
   process
   begin
     wait for 10ns;
@@ -178,62 +179,6 @@ begin
     wait for 1us;
     set <= '0';
     wait for 1us;
-
-    -- down <= '1';
-    -- wait for 700us;
-    -- down <= '0';
-    -- wait for 700us;
-    
-    -- down <= '1';
-    -- wait for 700us;
-    -- down <= '0';
-    -- wait for 700us;
-    
-    -- right <= '1';
-    -- wait for 700us;
-    -- right <= '0';
-    -- wait for 700us;
-    
-    -- right <= '1';
-    -- wait for 700us;
-    -- right <= '0';
-    -- wait for 700us;
-    
-    -- set <= '1';
-    -- wait for 700us;
-    -- set <= '0';
-    -- wait for 700us;
-    
-    -- down <= '1';
-    -- wait for 700us;
-    -- down <= '0';
-    -- wait for 700us;
-    
-    -- set <= '1';
-    -- wait for 700us;
-    -- set <= '0';
-    -- wait for 700us;
-    
-    -- right <= '1';
-    -- wait for 700us;
-    -- right <= '0';
-    -- wait for 700us;
-    
-    -- set <= '1';
-    -- wait for 700us;
-    -- set <= '0';
-    -- wait for 700us;
-    
-    -- up <= '1';
-    -- wait for 700us;
-    -- up <= '0';
-    -- wait for 700us;
-    
-    -- set <= '1';
-    -- wait for 700us;
-    -- set <= '0';
-    -- wait for 700us;
-    
     
     mode <= "00";
     wait for 50us;
