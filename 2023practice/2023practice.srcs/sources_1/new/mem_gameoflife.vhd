@@ -71,12 +71,12 @@ architecture Behavioral of mem_gameoflife is
   signal gol_y : UNSIGNED(calc_bits_width(GOL_HEIGHT)-1 downto 0);
   signal delayed_gol_x : STD_LOGIC_VECTOR(gol_x'range);
   signal delayed_gol_y : STD_LOGIC_VECTOR(gol_y'range);
-  signal ren    : STD_LOGIC;
-  signal wen    : STD_LOGIC;
-  signal delayed_ren   : STD_LOGIC;
-  signal delayed_wen1  : STD_LOGIC;
-  signal delayed_wen2  : STD_LOGIC;
-  signal s_flag : STD_LOGIC_VECTOR(1 downto 0);
+  signal ren : STD_LOGIC;
+  signal wen : STD_LOGIC;
+  signal delayed_ren  : STD_LOGIC;
+  signal delayed_wen1 : STD_LOGIC;
+  signal delayed_wen2 : STD_LOGIC;
+  signal s_flag : STD_LOGIC_VECTOR(i_mode'range);
 
   signal rom_addr : STD_LOGIC_VECTOR(GOL_ADDR_WIDTH-1 downto 0);
   signal delayed_rom_addr : STD_LOGIC_VECTOR(rom_addr'range);
@@ -104,7 +104,6 @@ architecture Behavioral of mem_gameoflife is
   signal delayed_gol_buf_addr_read : STD_LOGIC_VECTOR(GOL_ADDR_WIDTH-1 downto 0);
   signal gol_addr_write            : STD_LOGIC_VECTOR(GOL_ADDR_WIDTH-1 downto 0);
   
-  signal pattern_ena   : STD_LOGIC;
   signal pattern_wea   : STD_LOGIC;
   signal pattern_addra : STD_LOGIC_VECTOR(GOL_ADDR_WIDTH-1 downto 0);
   signal pattern_dina  : STD_LOGIC;
@@ -431,8 +430,6 @@ begin
   with s_flag(0) select
     pattern_wea <= delayed_wen1 when '1', -- user and rom
       delayed_wen2 when others;           -- gol
-
-  pattern_ena <= ren and (s_flag(0) or not set_zero);
 
   gol_addr_read  <= STD_LOGIC_VECTOR((unsigned(gol_y) * to_unsigned(GOL_WIDTH, gol_x'length)) + unsigned(gol_x));
 
