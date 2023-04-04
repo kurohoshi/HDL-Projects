@@ -63,8 +63,6 @@ architecture test of vga_driver_tb is
   signal addr_full : STD_LOGIC_VECTOR(H_BIT_WIDTH+V_BIT_WIDTH-1 downto 0);
   signal addr_gol  : STD_LOGIC_VECTOR(H_BIT_WIDTH+V_BIT_WIDTH-7 downto 0);
 begin
-  -- make clock divider
-  -- make BRAM module
   clk <= not clk after 1ns;
   
   pxl_clk_div: entity work.clk_div(Behavioral)

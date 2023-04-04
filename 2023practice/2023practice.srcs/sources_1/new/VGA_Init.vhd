@@ -39,7 +39,7 @@ entity VGA_Init is
     i_clk   : in  STD_LOGIC;
     i_reset : in  STD_LOGIC;
     i_mode  : in  STD_LOGIC_VECTOR(1 downto 0);
-    i_init  : in  STD_LOGIC;
+    i_set  : in  STD_LOGIC;
     
     o_hsync : out STD_LOGIC;
     o_vsync : out STD_LOGIC;
@@ -150,18 +150,15 @@ begin
     
   module_gameoflife: entity work.mem_gameoflife(Behavioral)
     port map(
---      i_addra  => , -- user selected addr
-      i_clka     => i_clk,
---      i_dina   => , -- user data toggle?
---      o_douta  => , -- used only for game of life update cycle
---      i_ena      => , -- determined by internal state machine
---      i_wea      => , -- determined by internal state machine
-      i_addrb    => pattern_addrb,
-      i_clkb     => pxl_clk,
-      o_doutb    => pattern_doutb,
-      i_enb      => delayed_active,
-      i_mode   => i_mode,
-      i_init   => i_init
+      i_addra => (others => '0'),
+      i_clka  => i_clk,
+      i_addrb => pattern_addrb,
+      i_clkb  => pxl_clk,
+      o_doutb => pattern_doutb,
+      i_enb   => delayed_active,
+      i_mode  => i_mode,
+      i_set   => i_set,
+      i_reset => i_reset
     );
     
   pattern_addrb <= std_logic_vector((unsigned(y_pos(V_BIT_WIDTH-1 downto 3)) * to_unsigned(FRAME_WIDTH/8, H_BIT_WIDTH-3)) + unsigned(x_pos(H_BIT_WIDTH-1 downto 3)));

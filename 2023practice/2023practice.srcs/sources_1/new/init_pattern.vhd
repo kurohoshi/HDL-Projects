@@ -76,9 +76,6 @@ architecture Behavioral of init_pattern is
   signal rom_addr   : STD_LOGIC_VECTOR(ADDR_WIDTH-1 downto 0);
   signal rom_dout   : STD_LOGIC_VECTOR(0 downto 0);
   signal rom_en     : STD_LOGIC;
-  signal r_addr     : STD_LOGIC_VECTOR(ADDR_WIDTH-1 downto 0);
-  signal r_data     : STD_LOGIC_VECTOR(0 downto 0);
-  signal r_en       : STD_LOGIC;
   
   signal delayed_rom_en   : STD_LOGIC;
   signal delayed_rom_addr : STD_LOGIC_VECTOR(ADDR_WIDTH-1 downto 0);
@@ -163,8 +160,6 @@ begin
     
     type t_init_state IS(idle, active, done);
     variable s_init : t_init_state := idle;
-    
-    
   begin
     if(rising_edge(i_clk)) then
       if(s_init = idle) then
