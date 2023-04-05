@@ -13,5 +13,5 @@ Some changes can be made to the project in order to:
  - make it scalable
 
 # Something needs to change
-Figure out a solution to organize this mess that is Vivado's project file structure
-beautify the README file some day...
+ - Figure out a solution to organize this mess that is Vivado's project file structure
+ - beautify the README file some day...
