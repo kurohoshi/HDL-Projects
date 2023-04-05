@@ -73,6 +73,9 @@ architecture Behavioral of VGA_Project is
   
   signal pxl_clk : STD_LOGIC;
   
+  signal pulse_en  : STD_LOGIC;
+  signal pulse_set : STD_LOGIC;
+  
   signal user_addr : STD_LOGIC_VECTOR(MEM_ADDR_WIDTH-1 downto 0);
   
   signal active : STD_LOGIC;
@@ -85,13 +88,13 @@ architecture Behavioral of VGA_Project is
     
   signal delayed_active : STD_LOGIC;
   
+  signal pattern_set   : STD_LOGIC;
   signal pattern_addrb : STD_LOGIC_VECTOR(MEM_ADDR_WIDTH-1 downto 0);
   signal delayed_pattern_addrb : STD_LOGIC_VECTOR(MEM_ADDR_WIDTH-1 downto 0);
   signal pattern_doutb : STD_LOGIC;
   
   signal u_cursor : STD_LOGIC;
 begin
-
   -- generate pixel clock, this determines the framerate of video output
   pxl_clk_gen: entity work.clk_wiz_0
     port map(
@@ -99,6 +102,15 @@ begin
       clk_in1  => i_clk,
       clk_out1 => pxl_clk
     );
+    
+  pulse_gen: entity work.pulser(Behavioral)
+    port map(
+      i_en    => pulse_en,
+      i_clk   => i_clk,
+      o_pulse => pulse_set
+    );
+  
+  pulse_en <= '1' when i_mode = "10" else '0';
     
   -- user input
   user_ctrl: entity work.User_Control(Behavioral)
@@ -186,9 +198,11 @@ begin
       o_doutb => pattern_doutb,
       i_enb   => delayed_active,
       i_mode  => i_mode,
-      i_set   => i_set,
+      i_set   => pattern_set,
       i_reset => i_reset
     );
+    
+  pattern_set <= pulse_set when i_mode = "10" else i_set;
     
   pattern_addrb <= std_logic_vector((unsigned(y_pos(y_pos'high downto 3)) * to_unsigned(FRAME_WIDTH/8, H_BIT_WIDTH-3)) + unsigned(x_pos(x_pos'high downto 3)));
   delayed_active <= active or active_buf(0) or active_buf(1); -- keep enabled for 2 extra clocks
