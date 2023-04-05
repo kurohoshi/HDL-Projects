@@ -148,10 +148,10 @@ begin
           s_gol <= gol_load;
         end if;
       elsif(s_gol = gol_load) then -- load into register
-        if(gol_x > 0 and gol_y > 0) then
-          wen <= '1';
-        else
+        if(gol_x = 0 or gol_y = 0) then
           wen <= '0';
+        else
+          wen <= '1';
         end if;
         
         gol_buf_en <= '0';
@@ -174,7 +174,7 @@ begin
           end if;
         end if;
 
-        if(gol_x = GOL_WIDTH-1 or gol_y = GOL_HEIGHT) then -- load 0 into register
+        if(gol_x = GOL_WIDTH-1 or (gol_y = GOL_HEIGHT-1 and gol_x = GOL_WIDTH)) then -- load 0 into register
           set_zero <= '1';
         else
           set_zero <= '0';
@@ -182,8 +182,13 @@ begin
         
         wen <= '0';
       elsif(s_gol = gol_end_load) then
+        if(gol_x = 0) then
+          wen <= '0';
+        else
+          wen <= '1';
+        end if;
+      
         ren <= '1';
-        wen <= '1';
         gol_buf_en <= '0';
         s_gol <= gol_end_save;
       elsif(s_gol = gol_end_save) then -- write last row of next gen into mem

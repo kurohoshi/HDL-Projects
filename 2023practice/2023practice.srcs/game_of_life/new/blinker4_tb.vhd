@@ -117,9 +117,9 @@ begin
     wait for 1us;
 
     for i in 1 to 3 loop
-      right <= '1';
+      left <= '1';
       wait for 1us;
-      right <= '0';
+      left <= '0';
       wait for 1us;
     end loop;
 
