@@ -14,8 +14,14 @@
 -- 
 -- Revision:
 -- Revision 0.01 - File Created
--- Additional Comments:
--- 
+-- Additional Comments: 
+--   https://nandland.com/project-7-uart-part-1-receive-data-from-computer/
+--     -- Common Configurations:
+--     -- Baud Rate: 9600, 19200, 115200
+--     -- Data Bits: 7, 8
+--     -- Parity Bits: 0, 1
+--     -- Stop Bits: 0, 1, 2
+--     -- Flow Control: None, On, Hardware
 ----------------------------------------------------------------------------------
 
 
@@ -41,65 +47,44 @@ entity uart is
   );
   Port (
     i_clk       : in STD_LOGIC;
+    
+    i_tx_en     : in STD_LOGIC;
+    i_tx_data   : in STD_LOGIC_VECTOR (7 downto 0);
+    o_tx_busy   : out STD_LOGIC;
+    o_tx_done   : out STD_LOGIC;
+    o_tx_serial : out STD_LOGIC;
+    
+    
     i_rx_serial : in STD_LOGIC;
-    i_reset     : in STD_LOGIC;
+    o_rx_done   : out STD_LOGIC;
+    o_rx_err    : out STD_LOGIC;
     o_rx_data   : out STD_LOGIC_VECTOR (7 downto 0)
   );
 end uart;
 
-architecture BehavioralSimple of uart is
+architecture Behavioral of uart is
     type t_fsm_state IS(idle, active);
     signal s_rx_state : t_fsm_state;
     
 begin
-    -- take care of non state machine stuff here
-    process(i_reset, i_clk)
-        
-    begin
-        if(i_reset = '0') then
-            -- reset all signals to default values
-        elsif(rising_edge(i_clk)) then
-            -- do stuff here
-        end if;
-    end process;
-
-    -- receive FSM
-    process(i_reset, i_clk)
-      constant MAX_BAUD_CLK : INTEGER := CLK_FREQ/BAUD_RATE;
-      variable clk_counter  : INTEGER := 0;
-      variable data_counter : INTEGER range 0 to DATA_WIDTH-1 := 0;
-    begin
-        if(i_reset = '1') then
-            -- reset all signals to default values
-            
-        elsif(falling_edge(i_clk)) then
-          case s_rx_state is
-            when idle =>
-              if(i_rx_serial = '0') then
-                if(clk_counter < MAX_BAUD_CLK/2) then
-                  clk_counter := clk_counter + 1;
-                  -- state remains unchanged
-                else
-                  clk_counter := 0;
-                  s_rx_state <= active;
-                end if;
-              end if;
-            when active =>
-              if(clk_counter < MAX_BAUD_CLK-1) then
-                clk_counter := clk_counter + 1;
-                -- state remains unchanged
-              elsif(data_counter < DATA_WIDTH) then -- counter has reached next baud midpoint
-                o_rx_data(data_counter) <= i_rx_serial;
-                clk_counter := 0;
-                data_counter := data_counter + 1;
-                
-                -- state remains unchanged
-              else -- stop bits
-                clk_counter := 0;
-                data_counter := 0;
-                s_rx_state <= idle;
-              end if;
-            end case;
-        end if;
-    end process;
-end BehavioralSimple;
+  uart_tx: entity work.uart_tx(Behavioral)
+    port map(
+      i_clk    => i_clk,
+      i_en     => i_tx_en,
+      i_data   => i_tx_data,
+      o_busy   => o_tx_busy,
+      o_done   => o_tx_done,
+      o_serial => o_tx_serial
+    );
+    
+  uart_rx: entity work.uart_rx(Behavioral)
+    port map(
+      i_clk    => i_clk,
+      i_serial => i_rx_serial,
+      o_done   => o_rx_done,
+      o_err    => o_rx_err,
+      o_data   => o_rx_data
+    );
+    
+  -- Some sort of logic disabling tx or rx when the other is active?
+end Behavioral;
