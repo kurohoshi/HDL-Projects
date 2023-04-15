@@ -63,9 +63,6 @@ entity uart is
 end uart;
 
 architecture Behavioral of uart is
-    type t_fsm_state IS(idle, active);
-    signal s_rx_state : t_fsm_state;
-    
 begin
   uart_tx: entity work.uart_tx(Behavioral)
     port map(

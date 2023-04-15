@@ -53,6 +53,7 @@ entity uart_rx is
   );
 end uart_rx;
 
+-- Refactor!
 architecture Behavioral of uart_rx is
   type t_fsm_state IS(idle, active);
   signal s_rx : t_fsm_state;

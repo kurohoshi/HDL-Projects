@@ -55,6 +55,7 @@ entity uart_tx is
   );
 end uart_tx;
 
+-- Refactor!
 architecture Behavioral of uart_tx is
   type t_fsm_state IS(tx_idle, tx_start, tx_data, tx_stop);
   signal s_tx : t_fsm_state;
