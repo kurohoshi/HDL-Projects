@@ -8,8 +8,9 @@
 -- Project Name: 
 -- Target Devices: 
 -- Tool Versions: 
--- Description: 
--- 
+-- Description: basic UART transceiver
+--    Some changes are needed for half-duplex operation
+--
 -- Dependencies: 
 -- 
 -- Revision:
@@ -39,49 +40,56 @@ use IEEE.STD_LOGIC_1164.ALL;
 
 entity uart is
   GENERIC (
-    CLK_FREQ   : INTEGER := 100_000_000;
-    BAUD_RATE  : INTEGER := 115_200;
-    DATA_WIDTH : INTEGER := 8;
-    PARITY     : INTEGER := 0;
-    STOP_WIDTH : INTEGER := 1
+    CLK_FREQ  : INTEGER := 100_000_000;
+    BAUD_RATE : INTEGER := 115_200;
+    DATA_BITS : INTEGER := 8;
+    PARITY    : INTEGER := 0;
+    STOP_BITS : INTEGER := 1
   );
   Port (
-    i_clk       : in STD_LOGIC;
+    i_clk : in STD_LOGIC;
     
-    i_tx_en     : in STD_LOGIC;
+    i_tx_set    : in STD_LOGIC;
     i_tx_data   : in STD_LOGIC_VECTOR (7 downto 0);
     o_tx_busy   : out STD_LOGIC;
-    o_tx_done   : out STD_LOGIC;
     o_tx_serial : out STD_LOGIC;
     
-    
     i_rx_serial : in STD_LOGIC;
-    o_rx_done   : out STD_LOGIC;
-    o_rx_err    : out STD_LOGIC;
+    o_rx_busy   : out STD_LOGIC;
     o_rx_data   : out STD_LOGIC_VECTOR (7 downto 0)
   );
 end uart;
 
 architecture Behavioral of uart is
+  constant CLKS_PER_BAUD : INTEGER := CLK_FREQ/BAUD_RATE;
+  
+  signal tx_set : STD_LOGIC;
+  signal rx_busy : STD_LOGIC;
 begin
   uart_tx: entity work.uart_tx(Behavioral)
+    generic map(
+      CLKS_PER_BAUD => CLKS_PER_BAUD,
+      DATA_BITS     => DATA_BITS,
+      STOP_BITS     => STOP_BITS
+    )
     port map(
       i_clk    => i_clk,
-      i_en     => i_tx_en,
+      i_set    => i_tx_set,
       i_data   => i_tx_data,
       o_busy   => o_tx_busy,
-      o_done   => o_tx_done,
       o_serial => o_tx_serial
     );
     
   uart_rx: entity work.uart_rx(Behavioral)
+    generic map(
+      CLKS_PER_BAUD => CLKS_PER_BAUD,
+      DATA_BITS     => DATA_BITS,
+      STOP_BITS     => STOP_BITS
+    )
     port map(
       i_clk    => i_clk,
       i_serial => i_rx_serial,
-      o_done   => o_rx_done,
-      o_err    => o_rx_err,
+      o_busy   => o_rx_busy,
       o_data   => o_rx_data
     );
-    
-  -- Some sort of logic disabling tx or rx when the other is active?
 end Behavioral;
