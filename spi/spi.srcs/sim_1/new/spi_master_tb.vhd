@@ -60,7 +60,7 @@ begin
     )
     port map(
       i_clk     => clk,
-      i_select  => sample,
+      i_init  => sample,
       i_reset   => reset,
       i_mode    => mode,
       i_tx_data => tx_data,
@@ -101,6 +101,7 @@ begin
       wait for CLK_PERIOD*CLKS_PER_SCLK;
     end loop;
 
+    miso <= '0';
     wait for CLK_PERIOD*CLKS_PER_SCLK*1;
     wait;
   end process;

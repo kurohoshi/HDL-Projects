@@ -37,20 +37,19 @@ entity spi_master is
     CLKS_PER_HALF_SCLK: INTEGER := 2
   );
   Port(
-    i_clk    : in  STD_LOGIC;
-    i_init : in  STD_LOGIC;
-    i_reset  : in  STD_LOGIC;
+    i_clk   : in  STD_LOGIC;
+    i_init  : in  STD_LOGIC;
+    i_reset : in  STD_LOGIC;
     
-    i_mode   : in STD_LOGIC_VECTOR(1 downto 0);
+    i_mode  : in STD_LOGIC_VECTOR(1 downto 0);
     
     i_tx_data : in STD_LOGIC_VECTOR(7 downto 0);
-    o_sel : out STD_LOGIC;
-    
     o_rx_data : out STD_LOGIC_VECTOR(7 downto 0);
     
-    o_sclk   : out STD_LOGIC;
-    o_mosi   : out STD_LOGIC;
-    i_miso   : in STD_LOGIC
+    o_sclk : out STD_LOGIC;
+    o_mosi : out STD_LOGIC;
+    i_miso : in STD_LOGIC;
+    o_select  : out STD_LOGIC
   );
 end spi_master;
 
@@ -60,7 +59,7 @@ architecture Behavioral of spi_master is
   signal r_sclk : STD_LOGIC;
   signal r_en   : STD_LOGIC;
   signal en_pulse : STD_LOGIC;
-  signal r_sel  : STD_LOGIC;
+  signal r_select : STD_LOGIC;
   signal r_sclk_edge_counter : INTEGER range 0 to DATA_BITS*2+1;
   
   signal r_tx_data : STD_LOGIC_VECTOR(i_tx_data'range);
@@ -105,7 +104,7 @@ begin
     end if;
   end process;
 
-  r_sel <= '1' when r_sclk_edge_counter /= 0 else '0';
+  r_select <= '0' when r_sclk_edge_counter /= 0 else '1';
   sclk_pulse <= '1' when sclk_counter = 0 and r_sclk_edge_counter > 1 else '0';
   mosi_pulse <= sclk_pulse and (r_sclk xor (i_mode(1) xor i_mode(0)));
   miso_pulse <= sclk_pulse and not (r_sclk xor (i_mode(1) xor i_mode(0)));
@@ -127,19 +126,19 @@ begin
   MOSI_serialize: process(i_clk)
   begin
     if(rising_edge(i_clk)) then
-        if(en_pulse = '1') then
-          r_tx_bit_counter <= 7;
-        end if;
+      if(en_pulse = '1') then
+        r_tx_bit_counter <= 7;
+      end if;
 
-        if((en_pulse = '1' and cpha = '0') or mosi_pulse = '1') then
-          if(not (cpha = '1' and r_sclk_edge_counter = DATA_BITS*2+1) and r_tx_bit_counter /= 0) then
-            r_tx_bit_counter <= r_tx_bit_counter - 1;
-          end if;
+      if((en_pulse = '1' and cpha = '0') or mosi_pulse = '1') then
+        if(not (cpha = '1' and r_sclk_edge_counter = DATA_BITS*2+1) and r_tx_bit_counter /= 0) then
+          r_tx_bit_counter <= r_tx_bit_counter - 1;
         end if;
+      end if;
     end if;
   end process;
 
-  o_mosi <= r_tx_data(r_tx_bit_counter) when r_sel = '1' else '0';
+  o_mosi <= r_tx_data(r_tx_bit_counter) when r_select = '0' else '0';
   
   MISO_read: process(i_clk)
   begin
@@ -168,5 +167,5 @@ begin
   end process;
 
   o_sclk <= r_sclk;
-  o_sel  <= r_sel;
+  o_select  <= r_select;
 end Behavioral;
