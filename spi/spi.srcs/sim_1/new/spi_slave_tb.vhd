@@ -35,9 +35,10 @@ entity spi_slave_tb is
 end spi_slave_tb;
 
 architecture Behavioral of spi_slave_tb is
+  constant DATA_BITS : INTEGER := 6;
   constant MODE : INTEGER := 0;
   constant SCLK_PERIOD : TIME := 6ns;
-  constant SIMO_DATA : STD_LOGIC_VECTOR(7 downto 0) := x"7a";
+  constant SIMO_DATA : STD_LOGIC_VECTOR(DATA_BITS-1 downto 0) := "011001";
 
   constant MODE_SIG : STD_LOGIC_VECTOR(1 downto 0) := std_logic_vector(to_unsigned(MODE, 2));
   alias CPOL : STD_LOGIC is MODE_SIG(1);
@@ -50,15 +51,16 @@ architecture Behavioral of spi_slave_tb is
   signal somi : STD_LOGIC;
   signal simo : STD_LOGIC := '0';
 
-  signal tx_data : STD_LOGIC_VECTOR(7 downto 0) := x"5c";
-  signal rx_data : STD_LOGIC_VECTOR(7 downto 0);
+  signal tx_data : STD_LOGIC_VECTOR(DATA_BITS-1 downto 0) := "001101";
+  signal rx_data : STD_LOGIC_VECTOR(DATA_BITS-1 downto 0);
 begin
   dut: entity work.spi_slave(Behavioral)
     generic map(
+      DATA_BITS => DATA_BITS,
       MODE => MODE
     )
     port map(
-      i_reset   => reset,
+      -- i_reset   => reset,
       i_tx_data => tx_data,
       o_rx_data => rx_data,
       i_sclk    => sclk,

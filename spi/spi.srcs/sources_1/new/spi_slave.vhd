@@ -8,14 +8,14 @@
 -- Project Name: 
 -- Target Devices: 
 -- Tool Versions: 
--- Description: SPI slave with local clock
+-- Description: Simple SPI slave without local clock
 -- 
 -- Dependencies: 
 -- 
 -- Revision:
 -- Revision 0.01 - File Created
 -- Additional Comments:
--- 
+--     -- https://surf-vhdl.com/spi-slave-vhdl-design/
 ----------------------------------------------------------------------------------
 
 
@@ -24,7 +24,7 @@ use IEEE.STD_LOGIC_1164.ALL;
 
 -- Uncomment the following library declaration if using
 -- arithmetic functions with Signed or Unsigned values
---use IEEE.NUMERIC_STD.ALL;
+use IEEE.NUMERIC_STD.ALL;
 
 -- Uncomment the following library declaration if instantiating
 -- any Xilinx leaf cells in this code.
@@ -33,104 +33,63 @@ use IEEE.STD_LOGIC_1164.ALL;
 
 entity spi_slave is
   Generic(
-    MODE : STD_LOGIC_VECTOR(1 downto 0) := "00"; -- keep as generic or move it to port?
-    CLKS_PER_HALF_SCLK: INTEGER := 2
+    DATA_BITS : INTEGER := 8;
+    MODE : INTEGER := 0
   );
   Port(
-    i_clk     : in  STD_LOGIC;
-    i_reset   : in  STD_LOGIC;
+    -- i_reset   : in  STD_LOGIC;
     
-    i_tx_data : in STD_LOGIC_VECTOR(7 downto 0);
-    o_rx_data : out STD_LOGIC_VECTOR(7 downto 0);
+    i_tx_data : in STD_LOGIC_VECTOR(DATA_BITS-1 downto 0);
+    o_rx_data : out STD_LOGIC_VECTOR(DATA_BITS-1 downto 0);
     
-    i_sclk : in STD_LOGIC;
-    i_simo : in STD_LOGIC;
-    o_somi : out STD_LOGIC;
+    i_sclk   : in STD_LOGIC;
+    i_simo   : in STD_LOGIC;
+    o_somi   : out STD_LOGIC;
     i_select : in STD_LOGIC
   );
 end spi_slave;
 
 architecture Behavioral of spi_slave is
-  signal sclk_counter : INTEGER range 0 to CLKS_PER_HALF_SCLK;
-  signal r_select     : STD_LOGIC;
-  signal select_pulse : STD_LOGIC;
-
-  signal sclk_pulse : STD_LOGIC;
-  signal simo_pulse : STD_LOGIC;
-  signal somi_pulse : STD_LOGIC;
+  constant MODE_SIG : STD_LOGIC_VECTOR(1 downto 0) := std_logic_vector(to_unsigned(MODE, 2));
+  constant CPOL : STD_LOGIC := MODE_SIG(1);
+  constant CPHA : STD_LOGIC := MODE_SIG(0);
   
   signal r_tx_data : STD_LOGIC_VECTOR(i_tx_data'range);
   signal r_rx_data : STD_LOGIC_VECTOR(o_rx_data'range);
-  signal r_tx_bit_counter : INTEGER range 0 to 7;
-  signal r_rx_bit_counter : INTEGER range 0 to 7;
+  signal r_tx_bit_counter : INTEGER range 0 to i_tx_data'length;
 begin
-  -- use mode to determine simo and somi pulse signals
-  pulse_gen: process(i_clk, i_reset)
-  begin
-    if(i_reset = '1') then
-      -- signals need reset?
-    elsif(rising_edge(i_clk)) then
-      if(i_select = '0') then
-        if(sclk_counter = CLKS_PER_HALF_SCLK-1) then
-          sclk_counter <= 0;
-          sclk_pulse <= '1';
-        else
-          sclk_counter <= sclk_counter + 1;
-          sclk_pulse <= '0';
-        end if;
-      end if;
-    end if;
-  end process;
-   
-  -- verify that this is correct
-  simo_pulse <= sclk_pulse and (i_sclk xor (MODE(1) xor MODE(0)));
-  somi_pulse <= sclk_pulse and not (i_sclk xor (MODE(1) xor MODE(0)));
-
-  -- latch data when select sig drives low
-  data_reg: process(i_clk)
-  begin
-    if(rising_edge(i_clk)) then
-      r_select <= i_select;
-      
-      if(i_select = '0' and r_select = '1') then
-        r_tx_data <= i_tx_data;
-      end if;
-    end if;
-  end process;
-  
-  select_pulse <= not i_select and r_select;
-
   -- send somi data
-  SOMI_serialize: process(i_clk)
+  SOMI_serialize: process(i_sclk, i_select)
   begin
-    if(rising_edge(i_clk)) then
-      if(i_select = '0') then
-        if(select_pulse = '1' and MODE(0) = '0') then
-          o_somi <= r_tx_data(7);
-          r_tx_bit_counter <= 6;
-        elsif(somi_pulse = '1') then
-          o_somi <= r_tx_data(r_tx_bit_counter);
-          r_tx_bit_counter <= r_tx_bit_counter - 1;
-        end if;
+    if(falling_edge(i_select)) then
+      r_tx_data <= i_tx_data;
+      o_somi <= i_tx_data(DATA_BITS-1);
+
+      if(CPHA = '0') then
+        r_tx_bit_counter <= DATA_BITS-2;
+      else
+        r_tx_bit_counter <= DATA_BITS-1;
+      end if;
+    elsif(rising_edge(i_select)) then
+      o_somi <= '0';
+    elsif((rising_edge(i_sclk) and (CPOL xor CPHA) = '1') or (falling_edge(i_sclk) and (CPOL xor CPHA) = '0')) then
+      o_somi <= r_tx_data(r_tx_bit_counter);
+
+      if(r_tx_bit_counter /= 0) then
+        r_tx_bit_counter <= r_tx_bit_counter - 1;
       end if;
     end if;
   end process;
   
   -- receive simo data
-  SIMO_read: process(i_clk)
+  SIMO_read: process(i_sclk, i_select)
   begin
-    if(rising_edge(i_clk)) then
-      if(i_select = '0') then
-        if(select_pulse = '1') then
-          r_rx_bit_counter <= 7;
-        elsif(simo_pulse = '1') then
-          r_rx_data(r_rx_bit_counter) <= i_simo;
-          r_rx_bit_counter <= r_rx_bit_counter - 1;
-          if(r_rx_bit_counter = 0) then
-            o_rx_data <= r_rx_data;
-          end if;
-        end if;
-      end if;
+    if((rising_edge(i_sclk) and (CPOL xor CPHA) = '0') or (falling_edge(i_sclk) and (CPOL xor CPHA) = '1')) then
+      r_rx_data <= r_rx_data(r_rx_data'length-2 downto 0) & i_simo;
+    elsif(rising_edge(i_select)) then
+      o_rx_data <= r_rx_data;
+    elsif(falling_edge(i_select)) then
+      o_rx_data <= (others => '0');
     end if;
   end process;
 end Behavioral;
