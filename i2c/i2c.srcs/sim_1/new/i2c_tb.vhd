@@ -42,11 +42,12 @@ architecture Behavioral of i2c_tb is
   signal set   : STD_LOGIC := '0';
 
   signal rw : STD_LOGIC := '0';
-  signal addr : STD_LOGIC_VECTOR(6 downto 0) := "0011001";
-  signal din  : STD_LOGIC_VECTOR(7 downto 0) := "10110010";
+  signal addr : STD_LOGIC_VECTOR(6 downto 0) := "1011001";
+  signal din  : STD_LOGIC_VECTOR(7 downto 0) := "10110011";
   signal dout : STD_LOGIC_VECTOR(7 downto 0);
 
-  signal o_busy : STD_LOGIC;
+  signal busy    : STD_LOGIC;
+  signal ack_err : STD_LOGIC;
 
   signal scl : STD_LOGIC;
   signal sda : STD_LOGIC;
@@ -62,14 +63,15 @@ begin
       o_dout  => dout,
       i_rw    => rw,
       i_set   => set,
-      o_busy  => o_busy,
+      o_busy  => busy,
       io_scl  => scl,
-      io_sda  => sda
+      io_sda  => sda,
+      o_ack_err => ack_err
     );
   
   process
   begin
-    wait for CLK_PERIOD*20;
+    wait for CLK_PERIOD*50;
 
     reset <= '1';
     wait for CLK_PERIOD*2;
