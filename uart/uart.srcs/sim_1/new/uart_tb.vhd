@@ -94,7 +94,7 @@ begin
       end loop;
       
       input_serial <= '1';
-      wait for BAUD_PERIOD*5;
+      wait for BAUD_PERIOD*3;
       
       report "Input Data=" & to_hstring(data_in(i)) & "   Output Data=" & to_hstring(output_data);
     end loop;
