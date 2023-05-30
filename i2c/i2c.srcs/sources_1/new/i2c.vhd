@@ -82,46 +82,46 @@ architecture Behavioral of i2c is
   signal sda_addr_bit : INTEGER range r_addr_rw'range;
   signal sda_data_bit : INTEGER range r_din'range;
 begin
+  scl_gen: process(i_reset, i_clk)
+  begin
+    if(i_reset = '1') then
+      scl_clk_counter <= 0;
+      r_scl <= '0';
+      sda_pulse <= '0';
+    elsif(rising_edge(i_clk)) then
+      sda_pulse <= '0';
+      r_scl_delayed <= r_scl;
 
-    scl_gen: process(i_reset, i_clk)
-    begin
-      if(i_reset = '1') then
-        scl_clk_counter <= 0;
+      if(s_scl = idle) then
         r_scl <= '0';
-        sda_pulse <= '0';
-      elsif(rising_edge(i_clk)) then
-        sda_pulse <= '0';
-        r_scl_delayed <= r_scl;
-
-        if(s_scl = idle) then
-          r_scl <= '0';
-          if(set_pulse = '1') then
-            sda_pulse <= '1';
-            scl_clk_counter <= CLK_DIV;
-            s_scl <= active;
-          end if;
-        elsif(s_scl = active) then
-          if(scl_clk_counter = 0) then
-            r_scl <= not r_scl;
-            scl_clk_counter <= CLK_DIV*2-1;
-          elsif(r_scl = '0' and io_scl = '0') then
-            scl_clk_counter <= scl_clk_counter;
-          else
-            scl_clk_counter <= scl_clk_counter-1;
-          end if;
-
-          if(scl_clk_counter = CLK_DIV+1) then
-            sda_pulse <= '1';
-          end if;
-
-          if(stop_pulse = '1') then
-            s_scl <= idle;
-          end if;
+        if(set_pulse = '1') then
+          sda_pulse <= '1';
+          scl_clk_counter <= CLK_DIV;
+          s_scl <= active;
+        end if;
+      elsif(s_scl = active) then
+        if(scl_clk_counter = 0) then
+          r_scl <= not r_scl;
+          scl_clk_counter <= CLK_DIV*2-1;
+        elsif(r_scl = '0' and io_scl = '0') then
+          scl_clk_counter <= scl_clk_counter;
         else
+          scl_clk_counter <= scl_clk_counter-1;
+        end if;
+
+        if(scl_clk_counter = CLK_DIV+1) then
+          sda_pulse <= '1';
+        end if;
+
+        if(stop_pulse = '1') then
           s_scl <= idle;
         end if;
+      else
+        s_scl <= idle;
       end if;
-    end process;
+    end if;
+  end process;
+
 
   data_latch: process(i_clk)
   begin
