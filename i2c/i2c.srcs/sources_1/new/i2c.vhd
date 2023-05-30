@@ -82,53 +82,6 @@ architecture Behavioral of i2c is
   signal sda_addr_bit : INTEGER range r_addr_rw'range;
   signal sda_data_bit : INTEGER range r_din'range;
 begin
-  -- scl_gen: process(i_reset, i_clk)
-  -- begin
-  --   if(i_reset = '1') then
-  --     scl_clk_counter <= 0;
-  --     scl_period <= 0;
-  --     r_scl <= '1';
-  --     sda_pulse <= '0';
-  --   elsif(rising_edge(i_clk)) then
-  --     sda_pulse <= '0';
-  --     r_scl_delayed <= r_scl;
-
-  --     if(set_pulse = '1') then
-  --       scl_en <= '1';
-  --       sda_pulse <= '1';
-  --       scl_clk_counter <= CLK_DIV;
-  --       scl_period <= TOTAL_SCL_PERIODS+2;
-  --     end if;
-
-  --     if(stop_pulse = '1') then
-  --       scl_en <= '0';
-  --     end if;
-
-  --     if(scl_period /= 0 or scl_clk_counter /= 0) then
-  --       if(scl_clk_counter = CLK_DIV+1) then
-  --         sda_pulse <= '1';
-  --       end if;
-
-  --       if(scl_clk_counter = 0) then
-  --         scl_clk_counter <= CLK_DIV*2-1;
-
-  --         if(scl_period /= 1) then
-  --           r_scl <= not r_scl;
-  --         end if;
-
-  --         if(r_scl = '1') then
-  --           scl_period <= scl_period-1;
-  --         end if;
-  --       elsif(r_scl = '1' and io_scl = '0') then -- stretch clk
-  --         scl_clk_counter <= scl_clk_counter;
-  --       else
-  --         scl_clk_counter <= scl_clk_counter-1;
-  --       end if;
-  --     else
-  --       r_scl <= '1';
-  --     end if;
-  --   end if;
-  -- end process;
 
     scl_gen: process(i_reset, i_clk)
     begin
