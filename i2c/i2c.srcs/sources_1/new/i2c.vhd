@@ -15,7 +15,8 @@
 -- Revision:
 -- Revision 0.01 - File Created
 -- Additional Comments:
---    -- Find URL that this module took inspiration from
+--    -- https://surf-vhdl.com/how-to-implement-a-parallel-to-serial-converter/
+--    -- https://forum.digikey.com/t/i2c-master-vhdl/12797
 ----------------------------------------------------------------------------------
 
 
@@ -54,7 +55,7 @@ end i2c;
 
 architecture Behavioral of i2c is
   constant TOTAL_SCL_PERIODS : INTEGER := (BYTES+1)*9;
-  type t_sda_state IS (idle, addr_send, addr_ack, data_write, data_read, data_write_ack, stop_comm);
+  type t_sda_state IS (idle, addr_send, addr_ack, data_write, data_read, data_write_ack, data_read_ack, stop_comm);
   signal s_i2c : t_sda_state;
 
   type t_scl_state IS (idle, active);
@@ -79,8 +80,8 @@ architecture Behavioral of i2c is
 
   signal stop_pulse   : STD_LOGIC;
   signal byte_counter : INTEGER range 0 to BYTES-1;
-  signal sda_addr_bit : INTEGER range r_addr_rw'range;
-  signal sda_data_bit : INTEGER range r_din'range;
+  signal sda_addr_bit : INTEGER range r_addr_rw'high+1 downto 0;
+  signal sda_data_bit : INTEGER range r_din'high+1 downto 0;
 begin
   scl_gen: process(i_reset, i_clk)
   begin
@@ -136,10 +137,13 @@ begin
   sda_gen: process(i_reset, i_clk)
   begin
     if(i_reset = '1') then
-      -- set values
+      sda_addr_bit <= 0;
+      sda_data_bit <= 0;
+      byte_counter <= 0;
+      tx_sda <= '1';
+      o_ack_err <= '0';
       s_i2c <= idle;
     elsif(rising_edge(i_clk)) then
-      o_ack_err <= '0';
       stop_pulse <= '0';
 
       if(set_pulse = '1') then
@@ -175,23 +179,24 @@ begin
             end if;
           elsif(s_i2c = data_read) then
 
-          elsif(s_i2c = data_write_ack) then -- either send stop sig/repeated start or start sending another byte
-
+          elsif(s_i2c = data_read_ack) then
+            tx_sda <= '0';
+            s_i2c <= stop_comm;
           elsif(s_i2c = stop_comm) then
 
           end if;
         else
           if(s_i2c = idle) then
-            -- if(set_pulse = '1') then
+              -- kicks off state machine with the first sda_pulse from set_pulse
               sda_addr_bit <= 8;
               sda_data_bit <= 8;
               byte_counter <= BYTES-1;
               tx_sda <= '0';
+              o_ack_err <= '0';
               s_i2c <= addr_send;
-            -- end if;
           elsif(s_i2c = addr_ack) then
-            -- check if io_sda is acknowledged
-            if(io_sda = '0') then
+            -- check if sda is acknowledged
+            if(rx_sda = '0') then
               if(r_rw = '0') then
                 s_i2c <= data_write;
               else
@@ -203,17 +208,18 @@ begin
               s_i2c <= idle;
             end if;
           elsif(s_i2c = data_read) then
-            r_dout(sda_data_bit) <= rx_sda;
-            sda_data_bit <= sda_data_bit-1;
-
+            r_dout <= r_dout(r_dout'high-1 downto 0) & rx_sda;
+            
             if(sda_data_bit = 0) then
-              s_i2c <= data_write_ack;
+              -- send ACK/NACK sig here
+              s_i2c <= data_read_ack;
             else
+              sda_data_bit <= sda_data_bit-1;
               s_i2c <= data_read;
             end if;
           elsif(s_i2c = data_write_ack) then
-            -- check if io_sda is acknowledged
-            if(io_sda = '0') then
+            -- check if sda is acknowledged
+            if(rx_sda = '0') then
               if(byte_counter = 0) then -- 0 bytes left to process
                 s_i2c <= stop_comm;
               else
@@ -226,6 +232,8 @@ begin
               s_i2c <= idle;
             end if;
           elsif(s_i2c = stop_comm) then
+            -- either send stop sig or start another transaction here
+            o_dout <= r_dout;
             stop_pulse <= '1';
             tx_sda <= '1';
             s_i2c <= idle;
