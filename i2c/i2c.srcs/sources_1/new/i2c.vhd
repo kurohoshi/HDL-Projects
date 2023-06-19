@@ -19,6 +19,19 @@
 --    -- https://forum.digikey.com/t/i2c-master-vhdl/12797
 ----------------------------------------------------------------------------------
 
+----------------------------------------------------------------------------------
+-- RESERVED ADDRESSES
+--  ADDRESS  | RW | MODE |    DESCRIPT
+-------------|----|------|-------------------
+--  0000 000 |  0 |   4  | general call addr
+--  0000 000 |  1 |   5  | START byte
+--  0000 001 |  X |   1  | CBUS addr
+--  0000 010 |  X |   2  | reserved bus format
+--  0000 011 |  X |   3  | reserved
+--  0000 1xx |  X |   0  | Hs-mode
+--  1111 0XX |  1 |   6  | device ID
+--  1111 1XX |  X |   7  | 10bit addr mode
+----------------------------------------------------------------------------------
 
 library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
@@ -34,16 +47,16 @@ use IEEE.STD_LOGIC_1164.ALL;
 
 entity i2c is
   Generic(
-    CLK_DIV : INTEGER := 8;
-    BYTES : INTEGER := 1; -- make it an input signal?
-    EXTENDED_ADDRESSING : INTEGER := 0 -- 7bit/10bit addressing
+    CLK_DIV : INTEGER := 8
   );
   Port(
     i_clk   : in STD_LOGIC;
     i_reset : in STD_LOGIC;
-    i_addr  : in STD_LOGIC_VECTOR(EXTENDED_ADDRESSING*3+6 downto 0); -- hacky way to do 7bit/10bit addressing
-    i_din   : in STD_LOGIC_VECTOR(BYTES*8-1 downto 0); -- somehow tie together the din and dout data width
-    o_dout  : out STD_LOGIC_VECTOR(BYTES*8-1 downto 0);
+    i_addr  : in STD_LOGIC_VECTOR(9 downto 0);
+    i_xaddr : in STD_LOGIC; -- 7bit/10bit addressing
+    i_din   : in STD_LOGIC_VECTOR(7 downto 0);
+    o_dout  : out STD_LOGIC_VECTOR(7 downto 0);
+    i_num_bytes : in STD_LOGIC_VECTOR(3 downto 0); -- variable number of bytes to send (max 8)
     i_rw    : in STD_LOGIC;
     i_set   : in STD_LOGIC;
     o_busy  : out STD_LOGIC;
@@ -82,6 +95,8 @@ architecture Behavioral of i2c is
   signal byte_counter : INTEGER range 0 to BYTES-1;
   signal sda_addr_bit : INTEGER range r_addr_rw'high+1 downto 0;
   signal sda_data_bit : INTEGER range r_din'high+1 downto 0;
+  signal res_addr : STD_LOGIC;
+  signal res_mode : STD_LOGIC_VECTOR(3 downto 0);
 begin
   scl_gen: process(i_reset, i_clk)
   begin
@@ -151,6 +166,22 @@ begin
         r_addr_rw <= i_addr & i_rw;
         r_din  <= i_din;
         o_busy <= '1';
+
+        if(i_addr(6 downto 3) = "0000") then
+          res_addr <= '1';
+          if(i_addr(2 downto 0) = "000") then
+            res_mode <= "10" & i_rw; -- general call addr and START byte
+          elsif(i_addr(2) = '1') then
+            res_mode <= "000"; -- Hs-mode
+          else
+            res_mode <= i_addr(2 downto 0); -- CBUS and other reserved addresses
+          end if;
+        elsif(i_addr(6 downto 3) = "1111") then
+          res_addr <= not i_addr(2) or i_rw;
+          res_mode <= "11" & i_addr(2); -- device ID or 10bit addr
+        else
+          res_addr <= '0';
+        end if;
       end if;
       
       if(sda_pulse = '1') then
