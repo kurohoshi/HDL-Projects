@@ -86,7 +86,8 @@ architecture Behavioral of i2c is
   signal scl_clk_counter : INTEGER range 0 to CLK_DIV*2-1;
   -- signal scl_period : INTEGER range 0 to TOTAL_SCL_PERIODS+1;
   signal scl_en : STD_LOGIC;
-  signal r_scl : STD_LOGIC;
+  signal tx_scl : STD_LOGIC;
+  signal rx_scl : STD_LOGIC;
   signal r_scl_delayed : STD_LOGIC;
   signal tx_sda : STD_LOGIC;
   signal rx_sda : STD_LOGIC;
@@ -104,14 +105,14 @@ begin
   begin
     if(i_reset = '1') then
       scl_clk_counter <= 0;
-      r_scl <= '0';
+      tx_scl <= '0';
       sda_pulse <= '0';
     elsif(rising_edge(i_clk)) then
       sda_pulse <= '0';
-      r_scl_delayed <= r_scl;
+      r_scl_delayed <= tx_scl;
 
       if(s_scl = idle) then
-        r_scl <= '0';
+        tx_scl <= '0';
         if(set_pulse = '1') then
           sda_pulse <= '1';
           scl_clk_counter <= CLK_DIV;
@@ -119,9 +120,9 @@ begin
         end if;
       elsif(s_scl = active) then
         if(scl_clk_counter = 0) then
-          r_scl <= not r_scl;
+          tx_scl <= not tx_scl;
           scl_clk_counter <= CLK_DIV*2-1;
-        elsif(r_scl = '0' and io_scl = '0') then
+        elsif(tx_scl = '0' and rx_scl = '0') then
           scl_clk_counter <= scl_clk_counter;
         else
           scl_clk_counter <= scl_clk_counter-1;
@@ -168,6 +169,12 @@ begin
         r_din  <= i_din;
         o_busy <= '1';
 
+        sda_addr_bit <= 8;
+        sda_data_bit <= 8;
+        byte_counter <= num_bytes-1;
+        tx_sda <= '0';
+        o_ack_err <= '0';
+
         if(i_addr(6 downto 3) = "0000") then
           res_addr <= '1';
           if(i_addr(2 downto 0) = "000") then
@@ -186,7 +193,7 @@ begin
       end if;
       
       if(sda_pulse = '1') then
-        if(r_scl = '1') then
+        if(tx_scl = '1') then
           if(s_i2c = addr_send) then
             if(sda_addr_bit = 0) then
               tx_sda <= '0';
@@ -215,11 +222,6 @@ begin
         else
           if(s_i2c = idle) then
             -- kicks off state machine with the first sda_pulse from set_pulse
-            sda_addr_bit <= 8;
-            sda_data_bit <= 8;
-            byte_counter <= num_bytes-1;
-            tx_sda <= '0';
-            o_ack_err <= '0';
           elsif(s_i2c = addr_ack) then
             -- check if sda is acknowledged
             if(rx_sda = '1') then
@@ -235,7 +237,7 @@ begin
           elsif(s_i2c = data_write_ack) then
             -- check if sda is acknowledged
             if(rx_sda = '0') then
-              if(byte_counter /= 0) then -- 0 bytes left to process
+              if(byte_counter /= 0) then -- more bytes left to process
                 byte_counter <= byte_counter-1;
               end if;
             else
@@ -259,7 +261,7 @@ begin
       s_i2c <= idle;
     elsif(rising_edge(i_clk)) then
       if(sda_pulse = '1') then
-        if(r_scl = '1') then
+        if(tx_scl = '1') then
           if(s_i2c = addr_send) then
             if(sda_addr_bit = 0) then
               s_i2c <= addr_ack;
@@ -306,7 +308,7 @@ begin
           elsif(s_i2c = data_write_ack) then
             -- check if sda is acknowledged
             if(rx_sda = '0') then
-              if(byte_counter /= 0) then -- 0 bytes left to process
+              if(byte_counter /= 0) then -- more bytes left to process
                 s_i2c <= data_write;
               else
                 s_i2c <= stop_comm;
@@ -323,7 +325,8 @@ begin
     end if;
   end process;
 
-  io_scl <= '0' when r_scl = '1' else 'Z';
+  io_scl <= '0' when tx_scl = '1' else 'Z';
+  rx_scl <= '1' when io_scl = '0' else '0';
   io_sda <= '0' when tx_sda = '0' else 'Z';
   rx_sda <= '0' when io_sda = '0' else '1';
 end Behavioral;
