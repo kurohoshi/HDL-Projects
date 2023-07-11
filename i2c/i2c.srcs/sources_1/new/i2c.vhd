@@ -38,7 +38,7 @@ use IEEE.STD_LOGIC_1164.ALL;
 
 -- Uncomment the following library declaration if using
 -- arithmetic functions with Signed or Unsigned values
--- use IEEE.NUMERIC_STD.ALL;
+use IEEE.NUMERIC_STD.ALL;
 
 -- Uncomment the following library declaration if instantiating
 -- any Xilinx leaf cells in this code.
@@ -56,7 +56,7 @@ entity i2c is
     i_xaddr : in STD_LOGIC; -- 7bit/10bit addressing
     i_din   : in STD_LOGIC_VECTOR(7 downto 0);
     o_dout  : out STD_LOGIC_VECTOR(7 downto 0);
-    i_num_bytes : in STD_LOGIC_VECTOR(3 downto 0); -- variable number of bytes to send (max 8)
+    i_xbytes : in STD_LOGIC_VECTOR(3 downto 0); -- variable number of bytes to send (max 16)
     i_rw    : in STD_LOGIC;
     i_set   : in STD_LOGIC;
     o_busy  : out STD_LOGIC;
@@ -67,7 +67,8 @@ entity i2c is
 end i2c;
 
 architecture Behavioral of i2c is
-  constant TOTAL_SCL_PERIODS : INTEGER := (BYTES+1)*9;
+  constant MAX_BYTES : INTEGER := 2**i_xbytes'length;
+
   type t_sda_state IS (idle, addr_send, addr_ack, data_write, data_read, data_write_ack, data_read_ack, stop_comm);
   signal s_i2c : t_sda_state;
 
@@ -83,7 +84,7 @@ architecture Behavioral of i2c is
   signal r_dout : STD_LOGIC_VECTOR(o_dout'range);
 
   signal scl_clk_counter : INTEGER range 0 to CLK_DIV*2-1;
-  signal scl_period : INTEGER range 0 to TOTAL_SCL_PERIODS+1;
+  -- signal scl_period : INTEGER range 0 to TOTAL_SCL_PERIODS+1;
   signal scl_en : STD_LOGIC;
   signal r_scl : STD_LOGIC;
   signal r_scl_delayed : STD_LOGIC;
@@ -92,7 +93,8 @@ architecture Behavioral of i2c is
   signal sda_pulse : STD_LOGIC;
 
   signal stop_pulse   : STD_LOGIC;
-  signal byte_counter : INTEGER range 0 to BYTES-1;
+  signal num_bytes : INTEGER := to_integer(unsigned(i_xbytes));
+  signal byte_counter : INTEGER range 0 to MAX_BYTES-1;
   signal sda_addr_bit : INTEGER range r_addr_rw'high+1 downto 0;
   signal sda_data_bit : INTEGER range r_din'high+1 downto 0;
   signal res_addr : STD_LOGIC;
@@ -221,7 +223,7 @@ begin
               -- kicks off state machine with the first sda_pulse from set_pulse
               sda_addr_bit <= 8;
               sda_data_bit <= 8;
-              byte_counter <= BYTES-1;
+              byte_counter <= num_bytes-1;
               tx_sda <= '0';
               o_ack_err <= '0';
               s_i2c <= addr_send;
