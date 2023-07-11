@@ -214,34 +214,28 @@ begin
           end if;
         else
           if(s_i2c = idle) then
-              -- kicks off state machine with the first sda_pulse from set_pulse
-              sda_addr_bit <= 8;
-              sda_data_bit <= 8;
-              byte_counter <= num_bytes-1;
-              tx_sda <= '0';
-              o_ack_err <= '0';
+            -- kicks off state machine with the first sda_pulse from set_pulse
+            sda_addr_bit <= 8;
+            sda_data_bit <= 8;
+            byte_counter <= num_bytes-1;
+            tx_sda <= '0';
+            o_ack_err <= '0';
           elsif(s_i2c = addr_ack) then
             -- check if sda is acknowledged
-            if(rx_sda = '0') then
-
-            else
+            if(rx_sda = '1') then
               o_ack_err <= '1';
               stop_pulse <= '1';
             end if;
           elsif(s_i2c = data_read) then
             r_dout <= r_dout(r_dout'high-1 downto 0) & rx_sda;
             
-            if(sda_data_bit = 0) then
-              -- send ACK/NACK sig here
-            else
+            if(sda_data_bit /= 0) then
               sda_data_bit <= sda_data_bit-1;
             end if;
           elsif(s_i2c = data_write_ack) then
             -- check if sda is acknowledged
             if(rx_sda = '0') then
-              if(byte_counter = 0) then -- 0 bytes left to process
-
-              else
+              if(byte_counter /= 0) then -- 0 bytes left to process
                 byte_counter <= byte_counter-1;
               end if;
             else
@@ -293,29 +287,29 @@ begin
               s_i2c <= addr_send;
           elsif(s_i2c = addr_ack) then
             -- check if sda is acknowledged
-            if(rx_sda = '0') then
+            if(rx_sda = '1') then
+              s_i2c <= idle;
+            else
               if(r_rw = '0') then
                 s_i2c <= data_write;
               else
                 s_i2c <= data_read;
               end if;
-            else
-              s_i2c <= idle;
             end if;
           elsif(s_i2c = data_read) then
-            if(sda_data_bit = 0) then
+            if(sda_data_bit /= 0) then
+              s_i2c <= data_read;
+            else
               -- send ACK/NACK sig here
               s_i2c <= data_read_ack;
-            else
-              s_i2c <= data_read;
             end if;
           elsif(s_i2c = data_write_ack) then
             -- check if sda is acknowledged
             if(rx_sda = '0') then
-              if(byte_counter = 0) then -- 0 bytes left to process
-                s_i2c <= stop_comm;
-              else
+              if(byte_counter /= 0) then -- 0 bytes left to process
                 s_i2c <= data_write;
+              else
+                s_i2c <= stop_comm;
               end if;
             else
               s_i2c <= idle;
