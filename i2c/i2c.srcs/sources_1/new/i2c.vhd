@@ -52,7 +52,7 @@ entity i2c is
   Port(
     i_clk   : in STD_LOGIC;
     i_reset : in STD_LOGIC;
-    i_addr  : in STD_LOGIC_VECTOR(6 downto 0);
+    i_addr  : in STD_LOGIC_VECTOR(9 downto 0);
     i_xaddr : in STD_LOGIC; -- 7bit/10bit addressing
     i_din   : in STD_LOGIC_VECTOR(7 downto 0);
     o_dout  : out STD_LOGIC_VECTOR(7 downto 0);
@@ -80,6 +80,7 @@ architecture Behavioral of i2c is
 
   signal r_rw : STD_LOGIC;
   signal r_addr_rw : STD_LOGIC_VECTOR(7 downto 0);
+  signal r_addr10 : STD_LOGIC_VECTOR(7 downto 0);
   signal r_din  : STD_LOGIC_VECTOR(i_din'range);
   signal r_dout : STD_LOGIC_VECTOR(o_dout'range);
 
@@ -155,7 +156,7 @@ begin
   end process;
 
 
-  start_reg: process(i_clk)
+  set_reg: process(i_clk)
   begin
     if(rising_edge(i_clk)) then
       r_set_delayed <= i_set;
@@ -178,7 +179,6 @@ begin
 
       if(set_pulse = '1') then
         r_rw <= i_rw;
-        r_addr_rw <= i_addr & i_rw;
         r_din  <= i_din;
         o_busy <= '1';
 
@@ -187,6 +187,14 @@ begin
         byte_counter <= unsigned(i_xbytes);
         tx_sda <= '0';
         o_ack_err <= '0';
+
+        if(i_xaddr = '1') then
+          r_addr_rw <= "11110" & i_addr(9 downto 8) & i_rw;
+          r_addr10  <= i_addr(7 downto 0);
+        else
+          r_addr_rw <= i_addr(6 downto 0) & i_rw;
+          r_addr10  <= (others => '0');
+        end if;
 
         if(i_addr(6 downto 3) = "0000") then
           res_addr <= '1';
@@ -301,8 +309,8 @@ begin
           end if;
         else
           if(s_i2c = idle) then
-              -- kicks off state machine with the first sda_pulse from set_pulse
-              s_i2c <= addr_send;
+            -- kicks off state machine with the first sda_pulse from set_pulse
+            s_i2c <= addr_send;
           elsif(s_i2c = addr_ack) then
             -- check if sda is acknowledged
             if(rx_sda = '1') then

@@ -42,7 +42,7 @@ architecture Behavioral of i2c_tb is
   signal set   : STD_LOGIC := '0';
 
   signal rw : STD_LOGIC := '0';
-  signal addr : STD_LOGIC_VECTOR(6 downto 0) := "1011001";
+  signal addr : STD_LOGIC_VECTOR(9 downto 0) := "000" & "1011001";
   signal xaddr : STD_LOGIC := '0';
   signal din  : STD_LOGIC_VECTOR(7 downto 0) := "10110011";
   signal dout : STD_LOGIC_VECTOR(7 downto 0);
