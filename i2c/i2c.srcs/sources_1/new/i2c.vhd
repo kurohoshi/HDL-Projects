@@ -52,7 +52,7 @@ entity i2c is
   Port(
     i_clk   : in STD_LOGIC;
     i_reset : in STD_LOGIC;
-    i_addr  : in STD_LOGIC_VECTOR(9 downto 0);
+    i_addr  : in STD_LOGIC_VECTOR(6 downto 0);
     i_xaddr : in STD_LOGIC; -- 7bit/10bit addressing
     i_din   : in STD_LOGIC_VECTOR(7 downto 0);
     o_dout  : out STD_LOGIC_VECTOR(7 downto 0);
@@ -72,14 +72,14 @@ architecture Behavioral of i2c is
   type t_sda_state IS (idle, addr_send, addr_ack, data_write, data_read, data_write_ack, data_read_ack, stop_comm);
   signal s_i2c : t_sda_state;
 
-  type t_scl_state IS (idle, active);
+  type t_scl_state IS (idle, hold, active);
   signal s_scl : t_scl_state;
 
   signal r_set_delayed : STD_LOGIC;
   signal set_pulse   : STD_LOGIC;
 
   signal r_rw : STD_LOGIC;
-  signal r_addr_rw : STD_LOGIC_VECTOR(i_addr'high+1 downto 0);
+  signal r_addr_rw : STD_LOGIC_VECTOR(7 downto 0);
   signal r_din  : STD_LOGIC_VECTOR(i_din'range);
   signal r_dout : STD_LOGIC_VECTOR(o_dout'range);
 
@@ -89,17 +89,18 @@ architecture Behavioral of i2c is
   signal tx_scl : STD_LOGIC;
   signal rx_scl : STD_LOGIC;
   signal r_scl_delayed : STD_LOGIC;
+  signal r_scl_active : STD_LOGIC; 
   signal tx_sda : STD_LOGIC;
   signal rx_sda : STD_LOGIC;
   signal sda_pulse : STD_LOGIC;
 
-  signal stop_pulse   : STD_LOGIC;
-  signal num_bytes : INTEGER := to_integer(unsigned(i_xbytes));
-  signal byte_counter : INTEGER range 0 to MAX_BYTES-1;
+  signal stop_pulse : STD_LOGIC;
+  -- signal num_bytes : UNSIGNED(i_xbytes'length-1 downto 0);
+  signal byte_counter : UNSIGNED(i_xbytes'length-1 downto 0);
   signal sda_addr_bit : INTEGER range r_addr_rw'high+1 downto 0;
   signal sda_data_bit : INTEGER range r_din'high+1 downto 0;
   signal res_addr : STD_LOGIC;
-  signal res_mode : STD_LOGIC_VECTOR(3 downto 0);
+  signal res_mode : STD_LOGIC_VECTOR(2 downto 0);
 begin
   scl_gen: process(i_reset, i_clk)
   begin
@@ -107,6 +108,7 @@ begin
       scl_clk_counter <= 0;
       tx_scl <= '0';
       sda_pulse <= '0';
+      r_scl_active <= '0';
     elsif(rising_edge(i_clk)) then
       sda_pulse <= '0';
       r_scl_delayed <= tx_scl;
@@ -116,13 +118,24 @@ begin
         if(set_pulse = '1') then
           sda_pulse <= '1';
           scl_clk_counter <= CLK_DIV;
-          s_scl <= active;
+          s_scl <= hold;
+        end if;
+      elsif(s_scl = hold) then
+        if(scl_clk_counter = 0) then
+          r_scl_active <= not r_scl_active;
+          if(r_scl_active = '0') then
+            s_scl <= active;
+          else
+            s_scl <= idle;
+          end if;
+        else
+          scl_clk_counter <= scl_clk_counter-1;
         end if;
       elsif(s_scl = active) then
         if(scl_clk_counter = 0) then
           tx_scl <= not tx_scl;
           scl_clk_counter <= CLK_DIV*2-1;
-        elsif(tx_scl = '0' and rx_scl = '0') then
+        elsif(tx_scl = '0' and rx_scl = '1') then
           scl_clk_counter <= scl_clk_counter;
         else
           scl_clk_counter <= scl_clk_counter-1;
@@ -133,7 +146,7 @@ begin
         end if;
 
         if(stop_pulse = '1') then
-          s_scl <= idle;
+          s_scl <= hold;
         end if;
       else
         s_scl <= idle;
@@ -142,7 +155,7 @@ begin
   end process;
 
 
-  data_latch: process(i_clk)
+  start_reg: process(i_clk)
   begin
     if(rising_edge(i_clk)) then
       r_set_delayed <= i_set;
@@ -157,7 +170,7 @@ begin
     if(i_reset = '1') then
       sda_addr_bit <= 0;
       sda_data_bit <= 0;
-      byte_counter <= 0;
+      byte_counter <= (others => '0');
       tx_sda <= '1';
       o_ack_err <= '0';
     elsif(rising_edge(i_clk)) then
@@ -171,7 +184,7 @@ begin
 
         sda_addr_bit <= 8;
         sda_data_bit <= 8;
-        byte_counter <= num_bytes-1;
+        byte_counter <= unsigned(i_xbytes);
         tx_sda <= '0';
         o_ack_err <= '0';
 
@@ -238,6 +251,8 @@ begin
             -- check if sda is acknowledged
             if(rx_sda = '0') then
               if(byte_counter /= 0) then -- more bytes left to process
+                r_din <= i_din;
+                sda_data_bit <= 8;
                 byte_counter <= byte_counter-1;
               end if;
             else
@@ -254,6 +269,7 @@ begin
       end if;
     end if;
   end process;
+
 
   state_change: process(i_reset, i_clk)
   begin
@@ -292,10 +308,10 @@ begin
             if(rx_sda = '1') then
               s_i2c <= idle;
             else
-              if(r_rw = '0') then
-                s_i2c <= data_write;
-              else
+              if(r_rw = '1') then
                 s_i2c <= data_read;
+              else
+                s_i2c <= data_write;
               end if;
             end if;
           elsif(s_i2c = data_read) then
