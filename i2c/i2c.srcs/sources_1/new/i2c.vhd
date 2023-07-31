@@ -69,7 +69,7 @@ end i2c;
 architecture Behavioral of i2c is
   constant MAX_BYTES : INTEGER := 2**i_xbytes'length;
 
-  type t_sda_state IS (idle, addr_send, addr_ack, data_write, data_read, data_write_ack, data_read_ack, stop_comm);
+  type t_sda_state IS (idle, hold, addr_send, addr_ack, data_write, data_read, data_write_ack, data_read_ack, stop_comm);
   signal s_i2c : t_sda_state;
 
   type t_scl_state IS (idle, hold, active);
@@ -90,13 +90,11 @@ architecture Behavioral of i2c is
   signal tx_scl : STD_LOGIC;
   signal rx_scl : STD_LOGIC;
   signal r_scl_delayed : STD_LOGIC;
-  signal r_scl_active : STD_LOGIC; 
+  signal r_scl_active : STD_LOGIC;
   signal tx_sda : STD_LOGIC;
   signal rx_sda : STD_LOGIC;
   signal sda_pulse : STD_LOGIC;
 
-  signal stop_pulse : STD_LOGIC;
-  -- signal num_bytes : UNSIGNED(i_xbytes'length-1 downto 0);
   signal byte_counter : UNSIGNED(i_xbytes'length-1 downto 0);
   signal sda_addr_bit : INTEGER range r_addr_rw'high+1 downto 0;
   signal sda_data_bit : INTEGER range r_din'high+1 downto 0;
@@ -123,8 +121,10 @@ begin
         end if;
       elsif(s_scl = hold) then
         if(scl_clk_counter = 0) then
+          sda_pulse <= '1';
           r_scl_active <= not r_scl_active;
           if(r_scl_active = '0') then
+            scl_clk_counter <= CLK_DIV-1;
             s_scl <= active;
           else
             s_scl <= idle;
@@ -136,7 +136,7 @@ begin
         if(scl_clk_counter = 0) then
           tx_scl <= not tx_scl;
           scl_clk_counter <= CLK_DIV*2-1;
-        elsif(tx_scl = '0' and rx_scl = '1') then
+        elsif(tx_scl = '0' and rx_scl = '1') then -- hold the counter if scl line to held down
           scl_clk_counter <= scl_clk_counter;
         else
           scl_clk_counter <= scl_clk_counter-1;
@@ -146,7 +146,10 @@ begin
           sda_pulse <= '1';
         end if;
 
-        if(stop_pulse = '1') then
+        -- Super jank, just works. Should be optimized at some point.
+        if(s_i2c = hold and scl_clk_counter = 2) then
+          sda_pulse <= '1';
+          scl_clk_counter <= CLK_DIV;
           s_scl <= hold;
         end if;
       else
@@ -175,8 +178,6 @@ begin
       tx_sda <= '1';
       o_ack_err <= '0';
     elsif(rising_edge(i_clk)) then
-      stop_pulse <= '0';
-
       if(set_pulse = '1') then
         r_rw <= i_rw;
         r_din  <= i_din;
@@ -235,19 +236,29 @@ begin
             end if;
           elsif(s_i2c = data_read) then
 
-          elsif(s_i2c = data_read_ack) then
+          elsif(s_i2c = data_read_ack) then -- needs work: delay transitioning to stop_comm by 1 SCL period
             tx_sda <= '0';
+            if(byte_counter /= 0) then -- more bytes left to process
+              sda_data_bit <= 8;
+              byte_counter <= byte_counter-1;
+            end if;
           elsif(s_i2c = stop_comm) then
 
           end if;
         else
           if(s_i2c = idle) then
             -- kicks off state machine with the first sda_pulse from set_pulse
+
+          elsif(s_i2c = hold) then
+            if(r_scl_active = '1') then
+              tx_sda <= '0';
+            else
+              tx_sda <= '1';
+            end if;
           elsif(s_i2c = addr_ack) then
             -- check if sda is acknowledged
             if(rx_sda = '1') then
               o_ack_err <= '1';
-              stop_pulse <= '1';
             end if;
           elsif(s_i2c = data_read) then
             r_dout <= r_dout(r_dout'high-1 downto 0) & rx_sda;
@@ -265,13 +276,11 @@ begin
               end if;
             else
               o_ack_err <= '1';
-              stop_pulse <= '1';
             end if;
           elsif(s_i2c = stop_comm) then
             -- either send stop sig or start another transaction here
             o_dout <= r_dout;
-            stop_pulse <= '1';
-            tx_sda <= '1';
+            tx_sda <= '0';
           end if;
         end if;
       end if;
@@ -279,7 +288,7 @@ begin
   end process;
 
 
-  state_change: process(i_reset, i_clk)
+  sda_state: process(i_reset, i_clk)
   begin
     if(i_reset = '1') then
       s_i2c <= idle;
@@ -292,8 +301,6 @@ begin
             else
               s_i2c <= addr_send;
             end if;
-          elsif(s_i2c = addr_ack) then
-            
           elsif(s_i2c = data_write) then
             if(sda_data_bit = 0) then
               s_i2c <= data_write_ack;
@@ -302,15 +309,25 @@ begin
             end if;
           elsif(s_i2c = data_read) then
 
-          elsif(s_i2c = data_read_ack) then
-            s_i2c <= stop_comm;
+          elsif(s_i2c = data_read_ack) then -- needs work: also needs to be delayed by 1 SCL
+            if(byte_counter /= 0) then -- more bytes left to process
+              s_i2c <= data_read;
+            else
+              s_i2c <= stop_comm;
+            end if;
           elsif(s_i2c = stop_comm) then
 
           end if;
         else
           if(s_i2c = idle) then
             -- kicks off state machine with the first sda_pulse from set_pulse
-            s_i2c <= addr_send;
+            s_i2c <= hold;
+          elsif(s_i2c = hold) then
+            if(r_scl_active = '1') then
+              s_i2c <= addr_send;
+            else
+              s_i2c <= stop_comm;
+            end if;
           elsif(s_i2c = addr_ack) then
             -- check if sda is acknowledged
             if(rx_sda = '1') then
@@ -335,7 +352,7 @@ begin
               if(byte_counter /= 0) then -- more bytes left to process
                 s_i2c <= data_write;
               else
-                s_i2c <= stop_comm;
+                s_i2c <= hold;
               end if;
             else
               s_i2c <= idle;
