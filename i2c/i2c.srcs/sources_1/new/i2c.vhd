@@ -47,7 +47,11 @@ use IEEE.NUMERIC_STD.ALL;
 
 entity i2c is
   Generic(
-    CLK_DIV : INTEGER := 8
+    CLK_DIV : INTEGER := 8;
+    START_STOP_HOLD_TIME : INTEGER := 16;
+    SCL_HIGH_TIME : INTEGER := 6;
+    SCL_LOW_TIME : INTEGER := 16;
+    SCL_PADDING : INTEGER := 0
   );
   Port(
     i_clk   : in STD_LOGIC;
@@ -67,6 +71,15 @@ entity i2c is
 end i2c;
 
 architecture Behavioral of i2c is
+  constant START_STOP_HOLD_PERIOD : INTEGER := START_STOP_HOLD_TIME - SCL_HIGH_TIME/2;
+  constant SCL_HIGH_PERIOD    : INTEGER := SCL_HIGH_TIME + SCL_PADDING;
+  constant SCL_LOW_PERIOD     : INTEGER := SCL_LOW_TIME  + SCL_PADDING;
+  constant SCL_MAX_PERIOD     : INTEGER := SCL_LOW_PERIOD + SCL_HIGH_PERIOD;
+  -- for odd numbered SCL_HIGH_PERIOD, SCL/SDA will toggle at the later clock (integer division rounds down)
+  constant SDA_TOGGLE_POINT   : INTEGER := SCL_MAX_PERIOD/2;
+  constant SCL_TOGGLE_POINT_1 : INTEGER := SCL_HIGH_PERIOD/2;
+  constant SCL_TOGGLE_POINT_2 : INTEGER := SCL_LOW_PERIOD + SCL_HIGH_PERIOD/2;
+
   constant MAX_BYTES : INTEGER := 2**i_xbytes'length;
 
   type t_sda_state IS (idle, hold, addr_send, addr_ack, data_write, data_read, data_write_ack, data_read_ack, stop_comm);
@@ -112,19 +125,19 @@ begin
       sda_pulse <= '0';
       r_scl_delayed <= tx_scl;
 
-      if(s_scl = idle) then
+      if(s_scl = idle) then -- handle when scl/sda is busy
         tx_scl <= '0';
         if(set_pulse = '1') then
           sda_pulse <= '1';
-          scl_clk_counter <= CLK_DIV;
+          scl_clk_counter <= START_STOP_HOLD_PERIOD-1;
           s_scl <= hold;
         end if;
       elsif(s_scl = hold) then
-        if(scl_clk_counter = 0) then
+        if(scl_clk_counter = 0) then -- handle repeated start here
           sda_pulse <= '1';
           r_scl_active <= not r_scl_active;
           if(r_scl_active = '0') then
-            scl_clk_counter <= CLK_DIV-1;
+            scl_clk_counter <= SCL_MAX_PERIOD-1;
             s_scl <= active;
           else
             s_scl <= idle;
@@ -134,23 +147,23 @@ begin
         end if;
       elsif(s_scl = active) then
         if(scl_clk_counter = 0) then
-          tx_scl <= not tx_scl;
-          scl_clk_counter <= CLK_DIV*2-1;
+          scl_clk_counter <= SCL_MAX_PERIOD-1;
+          if(s_i2c = stop_comm) then -- the end comm state from sda
+            scl_clk_counter <= START_STOP_HOLD_PERIOD-1;
+            s_scl <= hold;
+          end if;
         elsif(tx_scl = '0' and rx_scl = '1') then -- hold the counter if scl line to held down
           scl_clk_counter <= scl_clk_counter;
         else
           scl_clk_counter <= scl_clk_counter-1;
         end if;
 
-        if(scl_clk_counter = CLK_DIV+1) then
-          sda_pulse <= '1';
+        if(scl_clk_counter = SCL_TOGGLE_POINT_1 or scl_clk_counter = SCL_TOGGLE_POINT_2) then
+          tx_scl <= not tx_scl;
         end if;
 
-        -- Super jank, just works. Should be optimized at some point.
-        if(s_i2c = hold and scl_clk_counter = 2) then
+        if(scl_clk_counter = SDA_TOGGLE_POINT or scl_clk_counter = 0) then
           sda_pulse <= '1';
-          scl_clk_counter <= CLK_DIV;
-          s_scl <= hold;
         end if;
       else
         s_scl <= idle;
@@ -315,8 +328,19 @@ begin
             else
               s_i2c <= stop_comm;
             end if;
+          elsif(s_i2c = data_write_ack) then
+            -- check if sda is acknowledged
+            if(rx_sda = '0') then
+              if(byte_counter /= 0) then -- more bytes left to process
+                s_i2c <= data_write;
+              else
+                s_i2c <= stop_comm;
+              end if;
+            else
+              s_i2c <= idle;
+            end if;
           elsif(s_i2c = stop_comm) then
-
+            
           end if;
         else
           if(s_i2c = idle) then
@@ -326,7 +350,7 @@ begin
             if(r_scl_active = '1') then
               s_i2c <= addr_send;
             else
-              s_i2c <= stop_comm;
+              s_i2c <= idle;
             end if;
           elsif(s_i2c = addr_ack) then
             -- check if sda is acknowledged
@@ -346,20 +370,8 @@ begin
               -- send ACK/NACK sig here
               s_i2c <= data_read_ack;
             end if;
-          elsif(s_i2c = data_write_ack) then
-            -- check if sda is acknowledged
-            if(rx_sda = '0') then
-              if(byte_counter /= 0) then -- more bytes left to process
-                s_i2c <= data_write;
-              else
-                s_i2c <= hold;
-              end if;
-            else
-              s_i2c <= idle;
-            end if;
           elsif(s_i2c = stop_comm) then
-            -- either send stop sig or start another transaction here
-            s_i2c <= idle;
+            s_i2c <= hold;
           end if;
         end if;
       end if;
