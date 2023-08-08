@@ -33,6 +33,11 @@
 --  1111 1XX |  X |   7  | 10bit addr mode
 ----------------------------------------------------------------------------------
 
+----------------------------------------------------------------------------------
+-- ASSUMPTIONS
+--   - SCL_HIGH_TIME < START_STOP_HOLD_TIME
+----------------------------------------------------------------------------------
+
 library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
 
@@ -101,6 +106,7 @@ architecture Behavioral of i2c is
   -- signal scl_period : INTEGER range 0 to TOTAL_SCL_PERIODS+1;
   signal scl_en : STD_LOGIC;
   signal tx_scl : STD_LOGIC;
+  signal tx_scl_delayed : STD_LOGIC;
   signal rx_scl : STD_LOGIC;
   signal r_scl_delayed : STD_LOGIC;
   signal r_scl_active : STD_LOGIC;
@@ -129,7 +135,7 @@ begin
         tx_scl <= '0';
         if(set_pulse = '1') then
           sda_pulse <= '1';
-          scl_clk_counter <= START_STOP_HOLD_PERIOD-1;
+          scl_clk_counter <= START_STOP_HOLD_PERIOD-2;
           s_scl <= hold;
         end if;
       elsif(s_scl = hold) then
@@ -152,7 +158,7 @@ begin
             scl_clk_counter <= START_STOP_HOLD_PERIOD-1;
             s_scl <= hold;
           end if;
-        elsif(tx_scl = '0' and rx_scl = '1') then -- hold the counter if scl line to held down
+        elsif(tx_scl_delayed = '0' and rx_scl = '1') then -- hold the counter if scl line to held down
           scl_clk_counter <= scl_clk_counter;
         else
           scl_clk_counter <= scl_clk_counter-1;
@@ -340,7 +346,7 @@ begin
               s_i2c <= idle;
             end if;
           elsif(s_i2c = stop_comm) then
-            
+
           end if;
         else
           if(s_i2c = idle) then
@@ -378,7 +384,14 @@ begin
     end if;
   end process;
 
-  io_scl <= '0' when tx_scl = '1' else 'Z';
+  delay_scl: process(i_clk)
+  begin
+    if(rising_edge(i_clk)) then
+      tx_scl_delayed <= tx_scl;
+    end if;
+  end process;
+
+  io_scl <= '0' when tx_scl_delayed = '1' else 'Z';
   rx_scl <= '1' when io_scl = '0' else '0';
   io_sda <= '0' when tx_sda = '0' else 'Z';
   rx_sda <= '0' when io_sda = '0' else '1';
