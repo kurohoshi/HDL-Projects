@@ -113,6 +113,8 @@ architecture Behavioral of i2c is
   signal tx_sda : STD_LOGIC;
   signal rx_sda : STD_LOGIC;
   signal sda_pulse : STD_LOGIC;
+  signal repeated_start : STD_LOGIC;
+  signal repeated_set : STD_LOGIC;
 
   signal byte_counter : UNSIGNED(i_xbytes'length-1 downto 0);
   signal sda_addr_bit : INTEGER range r_addr_rw'high+1 downto 0;
@@ -142,11 +144,15 @@ begin
         if(scl_clk_counter = 0) then -- handle repeated start here
           sda_pulse <= '1';
           r_scl_active <= not r_scl_active;
-          if(r_scl_active = '0') then
-            scl_clk_counter <= SCL_MAX_PERIOD-1;
-            s_scl <= active;
+          if(repeated_start = '1') then
+            scl_clk_counter <= START_STOP_HOLD_PERIOD-1;
           else
-            s_scl <= idle;
+            if(r_scl_active = '0') then
+              scl_clk_counter <= SCL_MAX_PERIOD-1;
+              s_scl <= active;
+            else
+              s_scl <= idle;
+            end if;
           end if;
         else
           scl_clk_counter <= scl_clk_counter-1;
@@ -196,8 +202,11 @@ begin
       byte_counter <= (others => '0');
       tx_sda <= '1';
       o_ack_err <= '0';
+      repeated_start <= '0';
     elsif(rising_edge(i_clk)) then
-      if(set_pulse = '1') then
+      if(set_pulse = '1' or repeated_set = '1') then
+        repeated_set <= '0';
+
         r_rw <= i_rw;
         r_din  <= i_din;
         o_busy <= '1';
@@ -261,6 +270,12 @@ begin
               sda_data_bit <= 8;
               byte_counter <= byte_counter-1;
             end if;
+          elsif(s_i2c = data_write_ack) then
+            if(repeated_start = '1') then
+              tx_sda <= '1';
+            else
+              tx_sda <= '0';
+            end if;
           elsif(s_i2c = stop_comm) then
 
           end if;
@@ -269,7 +284,10 @@ begin
             -- kicks off state machine with the first sda_pulse from set_pulse
 
           elsif(s_i2c = hold) then
-            if(r_scl_active = '1') then
+            repeated_start <= '0';
+            
+            if(r_scl_active = '1' or repeated_start = '1') then
+              repeated_set <= '1';
               tx_sda <= '0';
             else
               tx_sda <= '1';
@@ -299,7 +317,6 @@ begin
           elsif(s_i2c = stop_comm) then
             -- either send stop sig or start another transaction here
             o_dout <= r_dout;
-            tx_sda <= '0';
           end if;
         end if;
       end if;
@@ -356,7 +373,11 @@ begin
             if(r_scl_active = '1') then
               s_i2c <= addr_send;
             else
-              s_i2c <= idle;
+              if(repeated_start = '1') then
+                s_i2c <= hold;
+              else
+                s_i2c <= idle;
+              end if;
             end if;
           elsif(s_i2c = addr_ack) then
             -- check if sda is acknowledged
