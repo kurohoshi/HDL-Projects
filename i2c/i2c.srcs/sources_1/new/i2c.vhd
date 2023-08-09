@@ -77,6 +77,7 @@ end i2c;
 
 architecture Behavioral of i2c is
   constant START_STOP_HOLD_PERIOD : INTEGER := START_STOP_HOLD_TIME - SCL_HIGH_TIME/2;
+  -- constant START_STOP_HOLD_PERIOD : INTEGER := MAXIMUN(0, START_STOP_HOLD_TIME - SCL_HIGH_TIME/2); -- feature only available in VHDL 2008
   constant SCL_HIGH_PERIOD    : INTEGER := SCL_HIGH_TIME + SCL_PADDING;
   constant SCL_LOW_PERIOD     : INTEGER := SCL_LOW_TIME  + SCL_PADDING;
   constant SCL_MAX_PERIOD     : INTEGER := SCL_LOW_PERIOD + SCL_HIGH_PERIOD;
