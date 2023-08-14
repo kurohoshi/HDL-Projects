@@ -272,11 +272,7 @@ begin
               byte_counter <= byte_counter-1;
             end if;
           elsif(s_i2c = data_write_ack) then
-            if(repeated_start = '1') then
-              tx_sda <= '1';
-            else
-              tx_sda <= '0';
-            end if;
+
           elsif(s_i2c = stop_comm) then
 
           end if;
@@ -311,6 +307,12 @@ begin
                 r_din <= i_din;
                 sda_data_bit <= 8;
                 byte_counter <= byte_counter-1;
+              end if;
+
+              if(repeated_start = '1') then
+                tx_sda <= '1';
+              else
+                tx_sda <= '0';
               end if;
             else
               o_ack_err <= '1';
@@ -352,17 +354,6 @@ begin
             else
               s_i2c <= stop_comm;
             end if;
-          elsif(s_i2c = data_write_ack) then
-            -- check if sda is acknowledged
-            if(rx_sda = '0') then
-              if(byte_counter /= 0) then -- more bytes left to process
-                s_i2c <= data_write;
-              else
-                s_i2c <= stop_comm;
-              end if;
-            else
-              s_i2c <= idle;
-            end if;
           elsif(s_i2c = stop_comm) then
 
           end if;
@@ -397,6 +388,17 @@ begin
             else
               -- send ACK/NACK sig here
               s_i2c <= data_read_ack;
+            end if;
+          elsif(s_i2c = data_write_ack) then
+            -- check if sda is acknowledged
+            if(rx_sda = '0') then
+              if(byte_counter /= 0) then -- more bytes left to process
+                s_i2c <= data_write;
+              else
+                s_i2c <= stop_comm;
+              end if;
+            else
+              s_i2c <= idle;
             end if;
           elsif(s_i2c = stop_comm) then
             s_i2c <= hold;
