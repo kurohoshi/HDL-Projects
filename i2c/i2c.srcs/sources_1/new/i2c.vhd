@@ -271,10 +271,6 @@ begin
             end if;
           elsif(s_i2c = data_read_ack) then
             tx_sda <= '0'; -- TODO: implement deciding logic to send correct ACK signal
-            if(byte_counter /= 0) then -- more bytes left to process
-              sda_data_bit <= 8;
-              byte_counter <= byte_counter-1;
-            end if;
           elsif(s_i2c = data_write_ack) then
 
           elsif(s_i2c = stop_comm) then
@@ -304,6 +300,11 @@ begin
             end if;
           elsif(s_i2c = data_read) then
             r_dout <= r_dout(r_dout'high-1 downto 0) & rx_sda;
+          elsif(s_i2c = data_read_ack) then
+            if(byte_counter /= 0) then -- more bytes left to process
+              sda_data_bit <= 8;
+              byte_counter <= byte_counter-1;
+            end if;
           elsif(s_i2c = data_write_ack) then
             -- check if sda is acknowledged
             if(rx_sda = '0') then
