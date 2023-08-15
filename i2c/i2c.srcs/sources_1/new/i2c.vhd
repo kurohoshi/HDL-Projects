@@ -122,6 +122,7 @@ architecture Behavioral of i2c is
   signal sda_data_bit : INTEGER range r_din'high+1 downto 0;
   signal res_addr : STD_LOGIC;
   signal res_mode : STD_LOGIC_VECTOR(2 downto 0);
+  signal data_read_ack_hold : STD_LOGIC;
 begin
   scl_gen: process(i_reset, i_clk)
   begin
@@ -203,6 +204,7 @@ begin
       byte_counter <= (others => '0');
       tx_sda <= '1';
       o_ack_err <= '0';
+      data_read_ack_hold <= '0';
       repeated_start <= '0';
     elsif(rising_edge(i_clk)) then
       if(set_pulse = '1' or repeated_set = '1') then
@@ -264,9 +266,11 @@ begin
               r_din <= r_din(r_din'high-1 downto 0) & '0';
             end if;
           elsif(s_i2c = data_read) then
-
-          elsif(s_i2c = data_read_ack) then -- needs work: delay transitioning to stop_comm by 1 SCL period
-            tx_sda <= '0';
+            if(sda_data_bit /= 0) then
+              sda_data_bit <= sda_data_bit-1;
+            end if;
+          elsif(s_i2c = data_read_ack) then
+            tx_sda <= '0'; -- TODO: implement deciding logic to send correct ACK signal
             if(byte_counter /= 0) then -- more bytes left to process
               sda_data_bit <= 8;
               byte_counter <= byte_counter-1;
@@ -274,7 +278,11 @@ begin
           elsif(s_i2c = data_write_ack) then
 
           elsif(s_i2c = stop_comm) then
-
+            if(repeated_start = '1') then
+              tx_sda <= '1';
+            else
+              tx_sda <= '0';
+            end if;
           end if;
         else
           if(s_i2c = idle) then
@@ -296,10 +304,6 @@ begin
             end if;
           elsif(s_i2c = data_read) then
             r_dout <= r_dout(r_dout'high-1 downto 0) & rx_sda;
-            
-            if(sda_data_bit /= 0) then
-              sda_data_bit <= sda_data_bit-1;
-            end if;
           elsif(s_i2c = data_write_ack) then
             -- check if sda is acknowledged
             if(rx_sda = '0') then
@@ -307,12 +311,6 @@ begin
                 r_din <= i_din;
                 sda_data_bit <= 8;
                 byte_counter <= byte_counter-1;
-              end if;
-
-              if(repeated_start = '1') then
-                tx_sda <= '1';
-              else
-                tx_sda <= '0';
               end if;
             else
               o_ack_err <= '1';
@@ -348,12 +346,6 @@ begin
             end if;
           elsif(s_i2c = data_read) then
 
-          elsif(s_i2c = data_read_ack) then -- needs work: also needs to be delayed by 1 SCL
-            if(byte_counter /= 0) then -- more bytes left to process
-              s_i2c <= data_read;
-            else
-              s_i2c <= stop_comm;
-            end if;
           elsif(s_i2c = stop_comm) then
 
           end if;
@@ -388,6 +380,12 @@ begin
             else
               -- send ACK/NACK sig here
               s_i2c <= data_read_ack;
+            end if;
+          elsif(s_i2c = data_read_ack) then -- needs work: also needs to be delayed by 1 SCL
+            if(byte_counter /= 0) then -- more bytes left to process
+              s_i2c <= data_read;
+            else
+              s_i2c <= stop_comm;
             end if;
           elsif(s_i2c = data_write_ack) then
             -- check if sda is acknowledged
